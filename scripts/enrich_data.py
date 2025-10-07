@@ -77,6 +77,8 @@ def enrich_weather_data_for_date(date_str, file_paths):
         if not all(col in df_cities.columns for col in required_city_cols):
             print(f"ERROR: Недостающие столбцы в {cities_ref_path}: {required_city_cols}. Пропускаем.")
             return
+        # Нормализуем city_name в справочнике для точного совпадения
+        df_cities['city_name'] = df_cities['city_name'].str.lower().str.strip()
     except Exception as e:
         print(f"ERROR: Ошибка чтения {cities_ref_path}: {e}. Пропускаем.")
         return
@@ -110,6 +112,9 @@ def enrich_weather_data_for_date(date_str, file_paths):
     
     # Заменяем пустые строки на NaN для корректной обработки
     combined_df = combined_df.replace('', pd.NA)
+    
+    # Нормализуем city_name в combined_df для точного совпадения
+    combined_df['city_name'] = combined_df['city_name'].str.lower().str.strip()
     
     # Мерджим с данными из cities_reference.csv по city_name
     combined_df = combined_df.merge(
