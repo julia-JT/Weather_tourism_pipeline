@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 
 # Папки
 enriched_dir = os.path.join(os.path.dirname(__file__), '..', 'data', 'enriched')
-forecasts_dir = os.path.join(os.path.dirname(__file__), '..', 'data', 'models', 'forecasts')
+forecasts_dir = os.path.join(os.path.dirname(__file__), '..', 'data', 'models', 'forecast')  # Исправлено: папка 'forecast' (без 's'), как в train_weather_model.py
 visualizations_dir = os.path.join(os.path.dirname(__file__), '..', 'data', 'visualizations')
 os.makedirs(visualizations_dir, exist_ok=True)
 
@@ -24,11 +24,17 @@ def load_historical_data():
 
 # Функция для загрузки прогноза
 def load_forecast():
-    forecast_path = os.path.join(forecasts_dir, 'forecast_tomorrow.csv')
+    # Определяем дату прогноза (завтра)
+    tomorrow = (datetime.now() + timedelta(days=1)).strftime('%Y%m%d')
+    forecast_path = os.path.join(forecasts_dir, f'forecast_{tomorrow}.csv')
     if os.path.exists(forecast_path):
-        return pd.read_csv(forecast_path, encoding='utf-8')
+        df = pd.read_csv(forecast_path, encoding='utf-8')
+        # Переименуем колонки для совместимости (если нужно)
+        if 'predicted_temperature' in df.columns:
+            df = df.rename(columns={'predicted_temperature': 'predicted_temp'})  # Для удобства
+        return df
     else:
-        print("Файл прогноза не найден. Пропускаем прогноз в графике.")
+        print(f"Файл прогноза {forecast_path} не найден. Пропускаем прогноз в графике.")
         return pd.DataFrame()
 
 # Функция для генерации графиков
@@ -41,24 +47,25 @@ def generate_plots():
         print("Нет исторических данных для визуализаций.")
         return
     
-    # Предполагаем, что данные по городам; для примера берем один город или усредняем
     # Группировка по дате (день) для упрощения графика
     df_hist['date'] = df_hist['as_of_date'].dt.date
     daily_comfort = df_hist.groupby('date')['comfort_index'].mean().reset_index()
     
-    # График 1: Исторический comfort_index
+    # График 1: Исторический comfort_index + прогноз температуры (поскольку comfort_index не прогнозируется напрямую)
     plt.figure(figsize=(10, 5))
     plt.plot(daily_comfort['date'], daily_comfort['comfort_index'], label='Исторический comfort_index', color='blue')
     
-    # Добавить прогноз на завтра, если есть
+    # Добавить прогноз температуры на завтра (comfort_index рассчитать нельзя без влажности)
     if not df_forecast.empty:
         forecast_date = pd.to_datetime(df_forecast['forecast_date'].iloc[0]).date()
-        forecast_value = df_forecast['predicted_comfort_index'].iloc[0]
-        plt.scatter(forecast_date, forecast_value, color='red', label='Прогноз на завтра', s=100)
+        forecast_temp = df_forecast['predicted_temp'].iloc[0]  # Теперь используем predicted_temperature
+        # Для примера: отображаем прогноз температуры как точку (comfort_index не прогнозируем)
+        plt.scatter(forecast_date, forecast_temp, color='red', label='Прогноз температуры на завтра', s=100)
+        # Если хотите, можно добавить аннотацию: plt.annotate(f'Прогноз temp: {forecast_temp:.1f}°C', (forecast_date, forecast_temp))
     
     plt.xlabel('Дата')
-    plt.ylabel('Comfort Index')
-    plt.title('Comfort Index: Исторические данные и прогноз')
+    plt.ylabel('Comfort Index / Температура (°C)')
+    plt.title('Comfort Index: Исторические данные и прогноз температуры')
     plt.legend()
     plt.grid(True)
     plt.xticks(rotation=45)
@@ -68,14 +75,21 @@ def generate_plots():
     plt.close()
     print(f"График сохранён в {plot_path}")
     
-    # Можно добавить больше графиков, например, для температуры и т.д.
-    # Пример: График температуры
+    # График 2: Температура с прогнозом
     daily_temp = df_hist.groupby('date')['temperature'].mean().reset_index()
     plt.figure(figsize=(10, 5))
-    plt.plot(daily_temp['date'], daily_temp['temperature'], label='Средняя температура', color='orange')
+    plt.plot(daily_temp['date'], daily_temp['temperature'], label='Историческая температура', color='orange')
+    
+    # Добавить прогноз температуры
+    if not df_forecast.empty:
+        forecast_date = pd.to_datetime(df_forecast['forecast_date'].iloc[0]).date()
+        forecast_temp = df_forecast['predicted_temp'].iloc[0]
+        plt.scatter(forecast_date, forecast_temp, color='red', label='Прогноз на завтра', s=100)
+    
     plt.xlabel('Дата')
     plt.ylabel('Температура (°C)')
-    plt.title('Средняя температура по дням')
+    plt.title('Средняя температура по дням с прогнозом')
+    plt.legend()
     plt.grid(True)
     plt.xticks(rotation=45)
     plt.tight_layout()
