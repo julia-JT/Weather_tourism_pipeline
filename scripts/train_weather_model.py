@@ -9,7 +9,7 @@ import pickle
 # Папки
 enriched_dir = os.path.join(os.path.dirname(__file__), '..', 'data', 'enriched')
 models_dir = os.path.join(os.path.dirname(__file__), '..', 'data', 'models')
-forecasts_dir = os.path.join(os.path.dirname(__file__), '..', 'data', 'forecasts')
+forecasts_dir = os.path.join(os.path.dirname(__file__), '..', 'data', 'models', 'forecasts')
 os.makedirs(models_dir, exist_ok=True)
 os.makedirs(forecasts_dir, exist_ok=True)
 
