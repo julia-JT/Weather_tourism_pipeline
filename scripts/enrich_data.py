@@ -6,18 +6,15 @@ from collections import defaultdict
 # Папки (предполагаем, что cleaned_data находится в data/cleaned/, а enriched в data/enriched/)
 cleaned_dir = os.path.join(os.path.dirname(__file__), '..', 'data', 'cleaned')
 enriched_dir = os.path.join(os.path.dirname(__file__), '..', 'data', 'enriched')
+cities_ref_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'cities_reference.csv')
 
 # Создаем папки
 os.makedirs(enriched_dir, exist_ok=True)
 
-# Маппинг федеральных округов по городам (расширьте при необходимости)
-federal_districts = {
-    'Москва': 'Центральный федеральный округ',
-    'Санкт-Петербург': 'Северо-Западный федеральный округ',
-    'Новосибирск': 'Сибирский федеральный округ',
-    'Казань': 'Приволжский федеральный округ',
-    'Сочи': 'Южный федеральный округ',
-    # Добавьте другие города, если нужно
+# Словарь месяцев для парсинга диапазонов (на русском)
+month_dict = {
+    'январь': 1, 'февраль': 2, 'март': 3, 'апрель': 4, 'май': 5, 'июнь': 6,
+    'июль': 7, 'август': 8, 'сентябрь': 9, 'октябрь': 10, 'ноябрь': 11, 'декабрь': 12
 }
 
 def calculate_comfort_index(row):
@@ -50,13 +47,40 @@ def determine_recommended_activity(comfort_index, pop):
         return "домашний отдых"
 
 def determine_season_match(current_month, tourism_season):
-    # Предполагаем tourism_season как строка месяцев, например "май-август"
-    # Простая проверка: если текущий месяц в сезоне (адаптируйте логику)
-    if tourism_season and str(current_month) in tourism_season:
+    if not tourism_season or pd.isna(tourism_season):
+        return "нет"
+    
+    tourism_season = tourism_season.strip().lower()  # Убираем пробелы и точки, приводим к нижнему
+    
+    if tourism_season == 'круглогодично':
         return "да"
+    
+    # Парсим диапазон, например "май-сентябрь" или "июнь-август."
+    parts = tourism_season.replace('.', '').split('-')
+    if len(parts) == 2:
+        start_month_name = parts[0].strip()
+        end_month_name = parts[1].strip()
+        start_month = month_dict.get(start_month_name, 0)
+        end_month = month_dict.get(end_month_name, 0)
+        if start_month > 0 and end_month > 0 and start_month <= current_month <= end_month:
+            return "да"
     return "нет"
 
 def enrich_weather_data_for_date(date_str, file_paths):
+    # Загружаем справочник городов
+    if not os.path.exists(cities_ref_path):
+        print(f"ERROR: Файл {cities_ref_path} не найден. Пропускаем обогащение для даты {date_str}.")
+        return
+    try:
+        df_cities = pd.read_csv(cities_ref_path, encoding='utf-8')
+        required_city_cols = ['city_name', 'federal_district', 'tourism_season']
+        if not all(col in df_cities.columns for col in required_city_cols):
+            print(f"ERROR: Недостающие столбцы в {cities_ref_path}: {required_city_cols}. Пропускаем.")
+            return
+    except Exception as e:
+        print(f"ERROR: Ошибка чтения {cities_ref_path}: {e}. Пропускаем.")
+        return
+    
     all_data = []
     for file_path in file_paths:
         try:
@@ -87,8 +111,18 @@ def enrich_weather_data_for_date(date_str, file_paths):
     # Заменяем пустые строки на NaN для корректной обработки
     combined_df = combined_df.replace('', pd.NA)
     
-    # Добавляем federal_district на основе city_name
-    combined_df['federal_district'] = combined_df['city_name'].map(federal_districts).fillna('Неизвестный федеральный округ')
+    # Мерджим с данными из cities_reference.csv по city_name
+    combined_df = combined_df.merge(
+        df_cities[['city_name', 'federal_district', 'tourism_season', 'timezone', 'population']],
+        on='city_name',
+        how='left'
+    )
+    
+    # Для городов, не найденных в справочнике, устанавливаем дефолты
+    combined_df['federal_district'] = combined_df['federal_district'].fillna('Неизвестный федеральный округ')
+    combined_df['tourism_season'] = combined_df['tourism_season'].fillna('добавьте город в справочник cities_reference.csv')
+    combined_df['timezone'] = combined_df['timezone'].fillna('UTC+3')  # Дефолт
+    combined_df['population'] = combined_df['population'].fillna(0)  # Дефолт
     
     # Рассчитываем comfort_index
     combined_df['comfort_index'] = combined_df.apply(calculate_comfort_index, axis=1)
@@ -96,11 +130,8 @@ def enrich_weather_data_for_date(date_str, file_paths):
     # Определяем recommended_activity
     combined_df['recommended_activity'] = combined_df.apply(lambda row: determine_recommended_activity(row['comfort_index'], row['pop']), axis=1)
     
-    # Добавляем tourism_season (статический, адаптируйте под реальные данные)
-    combined_df['tourism_season'] = "май-август"  # Пример: сезон для большинства городов
-    
-    # Определяем tourist_season_match (на основе текущего месяца)
-    current_month = datetime.now().month  # Текущий месяц (1-12)
+    # Определяем tourist_season_match (на основе месяца из date_str, а не текущего времени)
+    current_month = int(date_str[4:6])  # Извлекаем месяц из YYYYMMDD (MM)
     combined_df['tourist_season_match'] = combined_df.apply(lambda row: determine_season_match(current_month, row['tourism_season']), axis=1)
     
     # Формируем имя файла: weather_enriched_YYYYMMDD.csv (без времени)
