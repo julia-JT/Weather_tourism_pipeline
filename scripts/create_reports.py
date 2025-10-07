@@ -71,42 +71,53 @@ def create_reports():
     df_district_summary['as_of_date'] = datetime.now().strftime('%Y-%m-%d %H:%M')
     df_district_summary.to_csv(os.path.join(reports_dir, "federal_districts_summary.csv"), index=False, encoding='utf-8')
     
-    # Витрина 3: Отчет для турагентств
+  # Витрина 3: Отчет для турагентств (travel_recommendations.csv)
     df_travel_rec = df_all.copy()
-    # Топ-3 для поездок: Сортировка по comfort_index, фильтр по recommended_activity
-    top_cities = df_travel_rec[df_travel_rec['recommended_activity'] != "домашний отдых"].sort_values('comfort_index').head(3)[['city_name', 'comfort_index']]
+    # Топ-3 для поездок: Просто топ-3 лучших по comfort_index (descending), без фильтра по recommended_activity
+    top_cities = df_travel_rec.sort_values('comfort_index', ascending=False).head(3)[['city_name', 'comfort_index']]
     stay_home_cities = df_travel_rec[df_travel_rec['recommended_activity'] == "домашний отдых"][['city_name', 'comfort_index']]
-    # Специальные рекомендации
-    df_travel_rec['special_recommendations'] = df_travel_rec.apply(
+    
+    # Специальные рекомендации: Группировка по городу, конкатенация уникальных советов
+    df_special = df_travel_rec.groupby('city_name').agg({
+        'pop': 'first',  # Берем первое значение для простоты
+        'temperature': 'first'
+    }).reset_index()
+    df_special['special_recommendations'] = df_special.apply(
         lambda row: (
             ("Взять зонт" if row['pop'] > 0.5 else "") +
             ("; Теплую одежду" if row['temperature'] < 10 else "") +
             ("; Солнцезащитный крем" if row['temperature'] > 25 else "")
         ).strip("; "), axis=1
     )
-    # Уведомления о плохой погоде
-    df_travel_rec['weather_warnings'] = df_travel_rec.apply(
+    special_recs_str = '; '.join(df_special[df_special['special_recommendations'] != '']['special_recommendations'].unique())  # Уникальные рекомендации
+    
+    # Уведомления о плохой погоде: Аналогично, группировка и уникализация
+    df_warnings = df_travel_rec.groupby('city_name').agg({
+        'temperature': 'first',
+        'pop': 'first',
+        'clouds': 'first',
+        'humidity': 'first'
+    }).reset_index()
+    df_warnings['weather_warnings'] = df_warnings.apply(
         lambda row: (
             ("Очень холодно, риск обморожения" if row['temperature'] < 0 else "") +
             ("; Сильные осадки, возможно снег/дождь" if row['pop'] > 0.8 else "") +
             ("; Плохая видимость из-за тумана/облачности" if row['clouds'] > 80 or row['humidity'] > 90 else "")
         ).strip("; "), axis=1
     )
-    special_recs = df_travel_rec[['city_name', 'special_recommendations']].drop_duplicates()
-    weather_warns = df_travel_rec[['city_name', 'weather_warnings']].drop_duplicates()
+    weather_warns_str = '; '.join(df_warnings[df_warnings['weather_warnings'] != '']['weather_warnings'].unique())  # Уникальные предупреждения
     
     # Создать сводный DataFrame для витрины
     mart3_data = {
         'top_3_cities': [', '.join(top_cities['city_name'].tolist())],
         'stay_home_cities': [', '.join(stay_home_cities['city_name'].tolist())],
-        'special_recommendations': ['; '.join(special_recs['special_recommendations'].tolist())],
-        'weather_warnings': ['; '.join(weather_warns['weather_warnings'].tolist())]  # Новое поле
+        'special_recommendations': [special_recs_str],
+        'weather_warnings': [weather_warns_str]
     }
     df_mart3 = pd.DataFrame(mart3_data)
     # Добавить as_of_date в витрину
     df_mart3['as_of_date'] = datetime.now().strftime('%Y-%m-%d %H:%M')
     df_mart3.to_csv(os.path.join(reports_dir, "travel_recommendations.csv"), index=False, encoding='utf-8')
-    
     # Лог
     log_path = os.path.join(log_dir, "reports_log.txt")
     with open(log_path, 'w', encoding='utf-8') as log_file:
