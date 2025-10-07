@@ -17,7 +17,7 @@ jobs:
       uses: actions/checkout@v4
       with:
         submodules: false
-        token: ${{ secrets.REPO_ACCESS_TOKEN }}  # <-- Новый: Используем PAT для push прав
+        token: ${{ secrets.REPO_ACCESS_TOKEN }}  # Используем PAT для push прав
       
     - name: Set up Python
       uses: actions/setup-python@v4
@@ -27,7 +27,7 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install requests pandas  # Или pip install -r requirements.txt, если есть файл
+        pip install requests pandas scikit-learn matplotlib  # Добавлены зависимости для модели и визуализаций
         
     - name: Create data directories
       run: |
@@ -37,19 +37,19 @@ jobs:
       run: |
         python scripts/collect_data.py || echo "Data collection script failed"
         
-    - name: Verify files after collection  # <-- Новый: Проверяет файлы после каждого шага
+    - name: Verify files after collection
       run: |
         echo "Contents of data/ after collection:"
         ls -la data/ || echo "Data directory not found"
-        find data/ -type f -name "*.json" | head -10 || echo "No JSON files found"  # Показывает первые 10 файлов
+        find data/ -type f -name "*.json" | head -10 || echo "No JSON files found"
         
     - name: Upload data files as artifact after collection
-      if: always()  # Загружает даже при ошибке
+      if: always()
       uses: actions/upload-artifact@v4
       with:
         name: collected-data-after-collection
         path: data/
-        if-no-files-found: warn  # Предупредит, если файлов нет
+        if-no-files-found: warn
 
     - name: Run data cleaning
       run: |
@@ -105,7 +105,7 @@ jobs:
         path: data/
         if-no-files-found: warn
 
-    - name: Upload full logs as artifact  # <-- Новый: Загружает логи для анализа
+    - name: Upload full logs as artifact
       if: always()
       uses: actions/upload-artifact@v4
       with:
@@ -115,28 +115,30 @@ jobs:
     
     - name: Train weather model and generate forecasts
       run: |
-        pip install pandas scikit-learn matplotlib
-        python train_weather_model.py  # Предполагаем, что скрипт обновляет data/forecasts.csv на основе data/aggregated_weather.csv
-        git add data/models/forecasts.csv
-        git commit -m "Update forecasts from model"
-        git push  
+        python train_weather_model.py  # Запускает обучение, прогноз и визуализации
     
-    - name: Check git status (диагностика)  # Добавьте этот шаг
+    - name: Verify files after training and visualizations
       run: |
-        git status
-        ls -la data/  # Замените на вашу папку
-
-    - name: Configure Git  # Добавьте этот шаг
+        echo "Contents of data/ after training:"
+        ls -la data/ || echo "Data directory not found"
+        find data/ -type f | head -10 || echo "No files found"
+        
+    - name: Update README with visualizations
+      run: |
+        # Добавляет секцию с визуализациями в конец README.md
+        echo "" >> README.md
+        echo "## Визуализации" >> README.md
+        echo "![Comfort Index](data/visualizations/comfort_index.png)" >> README.md
+        echo "![Temperature](data/visualizations/temperature.png)" >> README.md  # Добавь больше, если нужно
+    
+    - name: Add, commit, and push changes
       run: |
         git config --local user.email "action@github.com"
         git config --local user.name "GitHub Action"
-
-    - name: Add, commit, and push  # Добавьте этот шаг
-      run: |
-        git add .
+        git add data/models/ data/visualizations/ README.md  # Добавляет прогнозы, визуализации и README
         git status  # Покажет, что добавлено
-        git commit -m "Add/update folder and file via Actions" --allow-empty
+        git commit -m "Update forecasts, visualizations, and README" --allow-empty
         git push https://${{ github.actor }}:${{ secrets.PAT }}@github.com/${{ github.repository }}.git ${{ github.ref_name }}
-
-    - name: Verify push (опционально)  # Добавьте этот шаг, если хотите
+    
+    - name: Verify push
       run: echo "Push completed. Check repo for changes."
