@@ -36,7 +36,8 @@ def create_reports():
     df_all = pd.concat(dfs, ignore_index=True)
     
     # Добавить столбец as_of_date (формат YYYY-MM-DD hh:mm)
-    df_all['as_of_date'] = datetime.now().strftime('%Y-%m-%d %H:%M')
+    current_as_of_date = datetime.now().strftime('%Y-%m-%d %H:%M')
+    df_all['as_of_date'] = current_as_of_date
     
     # Теперь df_all содержит все данные за весь период с as_of_date
     
@@ -53,10 +54,16 @@ def create_reports():
     )
     df_city_rating = df_city_rating.sort_values('comfort_index').rename(columns={'comfort_index': 'avg_comfort_index'})
     # Добавить as_of_date в витрину
-    df_city_rating['as_of_date'] = datetime.now().strftime('%Y-%m-%d %H:%M')
+    df_city_rating['as_of_date'] = current_as_of_date
     
-    # Перезапись витрины (без аккумуляции истории)
+    # Аккумуляция витрины 1
     city_rating_path = os.path.join(reports_dir, "city_tourism_rating.csv")
+    if os.path.exists(city_rating_path):
+        try:
+            df_existing = pd.read_csv(city_rating_path, encoding='utf-8')
+            df_city_rating = pd.concat([df_existing, df_city_rating], ignore_index=True)
+        except Exception as e:
+            print(f"WARNING: Ошибка чтения существующего {city_rating_path}: {e}. Создадим новый.")
     df_city_rating.to_csv(city_rating_path, index=False, encoding='utf-8')
     
     # Витрина 2: Сводка по федеральным округам
@@ -93,10 +100,16 @@ def create_reports():
     )
     
     # Добавить as_of_date
-    df_district_summary['as_of_date'] = datetime.now().strftime('%Y-%m-%d %H:%M')
+    df_district_summary['as_of_date'] = current_as_of_date
     
-    # Перезапись витрины (без аккумуляции истории)
+    # Аккумуляция витрины 2
     district_summary_path = os.path.join(reports_dir, "federal_districts_summary.csv")
+    if os.path.exists(district_summary_path):
+        try:
+            df_existing = pd.read_csv(district_summary_path, encoding='utf-8')
+            df_district_summary = pd.concat([df_existing, df_district_summary], ignore_index=True)
+        except Exception as e:
+            print(f"WARNING: Ошибка чтения существующего {district_summary_path}: {e}. Создадим новый.")
     df_district_summary.to_csv(district_summary_path, index=False, encoding='utf-8')
     
     # Витрина 3: Отчет для турагентств (travel_recommendations.csv)
@@ -140,24 +153,30 @@ def create_reports():
     }
     df_mart3 = pd.DataFrame(mart3_data)
     # Добавить as_of_date в витрину
-    df_mart3['as_of_date'] = datetime.now().strftime('%Y-%m-%d %H:%M')
+    df_mart3['as_of_date'] = current_as_of_date
     
-    # Перезапись витрины (без аккумуляции истории)
+    # Аккумуляция витрины 3
     travel_rec_path = os.path.join(reports_dir, "travel_recommendations.csv")
+    if os.path.exists(travel_rec_path):
+        try:
+            df_existing = pd.read_csv(travel_rec_path, encoding='utf-8')
+            df_mart3 = pd.concat([df_existing, df_mart3], ignore_index=True)
+        except Exception as e:
+            print(f"WARNING: Ошибка чтения существующего {travel_rec_path}: {e}. Создадим новый.")
     df_mart3.to_csv(travel_rec_path, index=False, encoding='utf-8')
     
-    # Лог
+    # Лог (дописываем, а не перезаписываем)
     log_path = os.path.join(log_dir, "reports_log.txt")
-    with open(log_path, 'w', encoding='utf-8') as log_file:
+    with open(log_path, 'a', encoding='utf-8') as log_file:  # 'a' для append
+        log_file.write(f"\n--- Новый запуск: {current_as_of_date} ---\n")
         log_file.write(f"Обработано файлов: {len(enriched_files)} ({', '.join(enriched_files)})\n")
         log_file.write(f"Всего строк данных: {len(df_all)}\n")
-        log_file.write(f"Дата загрузки: {datetime.now().strftime('%Y-%m-%d %H:%M')}\n")
         log_file.write("Витрина 1: Рейтинг городов (city_tourism_rating.csv) - сортировка по avg_comfort_index\n")
         log_file.write("Витрина 2: Сводка по округам (federal_districts_summary.csv) - средняя temp по всем городам, комфортные города (comfort > 15 и не домашний отдых), рекомендация\n")
         log_file.write("Витрина 3: Рекомендации (travel_recommendations.csv) - топ-3, дома, дополнительные заметки\n")
     
-    print(f"Отчеты созданы в {reports_dir} на основе всех данных за период")
-    print(f"Лог: {log_path}")
+    print(f"Отчеты обновлены (с аккумуляцией) в {reports_dir} на основе всех данных за период")
+    print(f"Лог дописан: {log_path}")
 
 # Запуск
 if __name__ == "__main__":
