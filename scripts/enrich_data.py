@@ -3,126 +3,103 @@ import os
 from datetime import datetime
 
 # Папки (относительные пути от scripts/ к data/)
+raw_dir = os.path.join(os.path.dirname(__file__), '..', 'data', 'raw')
 enriched_dir = os.path.join(os.path.dirname(__file__), '..', 'data', 'enriched')
-aggregated_dir = os.path.join(os.path.dirname(__file__), '..', 'data', 'aggregated')
-log_dir = aggregated_dir  # Лог в той же папке
+log_dir = enriched_dir  # Лог в той же папке
 
 # Создаем папки
-os.makedirs(aggregated_dir, exist_ok=True)
-os.makedirs(log_dir, exist_ok=True)
+os.makedirs(enriched_dir, exist_ok=True)
 
-# Основная функция
-def create_aggregated_reports():
-    # Найти последний enriched CSV (по дате)
-    enriched_files = [f for f in os.listdir(enriched_dir) if f.startswith("weather_enriched_") and f.endswith(".csv")]
-    if not enriched_files:
-        print("ERROR: Нет enriched CSV файлов в data/enriched/")
-        return
-    enriched_files.sort(reverse=True)  # Самый свежий файл
-    enriched_file = enriched_files[0]
-    enriched_path = os.path.join(enriched_dir, enriched_file)
-    
-    # Прочитать enriched CSV
-    try:
-        df = pd.read_csv(enriched_path, encoding='utf-8')
-    except Exception as e:
-        print(f"ERROR: Ошибка чтения {enriched_path}: {e}")
-        return
-    
-    # Дата для имени файлов и as_of_date
-    as_of_date = datetime.now().strftime('%Y-%m-%d %H:%M')
-    date_str = df['collection_time'].iloc[0].strftime("%Y%m%d") if not df.empty else datetime.now().strftime("%Y%m%d")
-    
-    # 1. travel_recommendations.csv
-    # Топ-3 городов по comfort_index (уникальные, без повторов)
-    df_sorted = df.dropna(subset=['comfort_index']).sort_values('comfort_index', ascending=False)
-    top_3_cities = ', '.join(df_sorted['city_name'].head(3).drop_duplicates().tolist())  # Уникальные
-    
-    # Города для stay_home: comfort_index < 10 (неуютно)
-    stay_home_cities = '; '.join(df[df['comfort_index'] < 10]['city_name'].unique().tolist())
-    
-    # Специальные рекомендации: для топ-3, на основе comfort_index и сезона
-    special_recs = []
-    for _, row in df_sorted.head(3).iterrows():
-        if row['comfort_index'] > 15 and row['current_season'] in ['лето', 'весна']:
-            special_recs.append(f"Активный отдых в {row['city_name']}")
-        elif row['comfort_index'] > 10:
-            special_recs.append(f"Прогулки в {row['city_name']}")
-        else:
-            special_recs.append(f"Музеи в {row['city_name']}")
-    special_recommendations = '; '.join(special_recs)
-    
-    # Погодные предупреждения: на основе pop и visibility
-    warnings = []
-    for _, row in df.iterrows():
-        if row['pop'] > 0.7:
-            warnings.append(f"Высокая вероятность осадков в {row['city_name']}")
-        if row['visibility'] < 5000:
-            warnings.append(f"Низкая видимость в {row['city_name']}")
-    weather_warnings = '; '.join(set(warnings))  # Уникальные
-    
-    travel_df = pd.DataFrame([{
-        'top_3_cities': top_3_cities,
-        'stay_home_cities': stay_home_cities,
-        'special_recommendations': special_recommendations,
-        'weather_warnings': weather_warnings,
-        'as_of_date': as_of_date
-    }])
-    travel_path = os.path.join(aggregated_dir, 'travel_recommendations.csv')
-    travel_df.to_csv(travel_path, index=False, encoding='utf-8')
-    
-    # 2. city_tourism_rating.csv
-    # Группировка по городу, расчет среднего comfort_index
-    city_ratings = df.groupby('city_name').agg(
-        avg_comfort_index=('comfort_index', 'mean'),
-        federal_district=('federal_district', 'first'),  # Берем первое значение
-        population=('population', 'first'),
-        tourism_season=('tourism_season', 'first')
-    ).reset_index()
-    # recommended_activity: на основе среднего comfort_index (с учетом pop из enriched, но усредняем)
-    avg_pop = df.groupby('city_name')['pop'].mean().reset_index()
-    city_ratings = pd.merge(city_ratings, avg_pop, on='city_name', how='left')
-    city_ratings['recommended_activity'] = city_ratings.apply(
-        lambda row: 'домашний отдых' if row['avg_pop'] >= 0.5 else (
-            'активный туризм' if row['avg_comfort_index'] > 15 else (
-                'прогулки' if row['avg_comfort_index'] > 10 else 'музеи'
-            )
-        ), axis=1
+def calculate_comfort_index(row):
+    # Формула comfort_index (адаптируйте веса под реальные данные)
+    # Базовый сдвиг +20, чтобы значения были положительными
+    comfort = (
+        (row['temperature'] * 0.4) +
+        (row['humidity'] * -0.2) +  # Высокая влажность снижает комфорт
+        (row['clouds'] * -0.1) +   # Облачность снижает
+        (row['pop'] * -0.3) +      # Осадки сильно снижают
+        (row['wind_speed'] * -0.1) +  # Ветер снижает
+        20  # Базовый сдвиг для положительных значений
     )
-    city_ratings.drop(columns=['avg_pop'], inplace=True)  # Убираем временное поле
-    city_path = os.path.join(aggregated_dir, 'city_tourism_rating.csv')
-    city_ratings.to_csv(city_path, index=False, encoding='utf-8')
+    return round(comfort, 2)
+
+def determine_recommended_activity(comfort_index, pop):
+    if comfort_index > 15 and (pop < 0.3 or pop is None):
+        return "активный туризм"
+    elif comfort_index > 10:
+        return "культурный туризм"
+    else:
+        return "домашний отдых"
+
+def determine_season_match(current_month, tourism_season):
+    # Предполагаем tourism_season как строка месяцев, например "май-август"
+    # Простая проверка: если текущий месяц в сезоне
+    if tourism_season and str(current_month) in tourism_season:
+        return "да"
+    return "нет"
+
+def enrich_weather_data(file_path):
+    try:
+        df = pd.read_csv(file_path, encoding='utf-8')
+    except Exception as e:
+        print(f"ERROR: Ошибка чтения {file_path}: {e}")
+        return
     
-    # 3. federal_districts_summary.csv
-    # Группировка по федеральному округу
-    district_summary = df.groupby('federal_district').agg(
-        total_cities=('city_name', 'nunique'),
-        comfortable_cities_count=('comfort_index', lambda x: (x > 10).sum()),  # Порог 10, адаптируйте
-        avg_population=('population', 'mean'),
-        avg_comfort_index=('comfort_index', 'mean')
-    ).reset_index()
-    district_path = os.path.join(aggregated_dir, 'federal_districts_summary.csv')
-    district_summary.to_csv(district_path, index=False, encoding='utf-8')
+    if df.empty:
+        print(f"WARNING: Файл {file_path} пустой")
+        return
+    
+    # Проверяем наличие необходимых столбцов
+    required_cols = ['city_name', 'temperature', 'humidity', 'clouds', 'pop', 'wind_speed', 'federal_district']
+    if not all(col in df.columns for col in required_cols):
+        print(f"ERROR: Недостающие столбцы в {file_path}: {required_cols}")
+        return
+    
+    # Рассчитываем comfort_index
+    df['comfort_index'] = df.apply(calculate_comfort_index, axis=1)
+    
+    # Определяем recommended_activity
+    df['recommended_activity'] = df.apply(lambda row: determine_recommended_activity(row['comfort_index'], row['pop']), axis=1)
+    
+    # Добавляем tourism_season (статический, адаптируйте под реальные данные)
+    df['tourism_season'] = "май-август"  # Пример: сезон для большинства городов
+    
+    # Определяем tourist_season_match (на основе текущего месяца)
+    current_month = datetime.now().month  # Текущий месяц (1-12)
+    df['tourist_season_match'] = df.apply(lambda row: determine_season_match(current_month, row['tourism_season']), axis=1)
+    
+    # Сохраняем enriched файл
+    enriched_file = f"weather_enriched_{os.path.basename(file_path)}"
+    enriched_path = os.path.join(enriched_dir, enriched_file)
+    df.to_csv(enriched_path, index=False, encoding='utf-8')
+    print(f"Enriched data saved to {enriched_path}")
+
+def main():
+    # Найти все raw CSV файлы
+    raw_files = [f for f in os.listdir(raw_dir) if f.startswith("weather_raw_") and f.endswith(".csv")]
+    if not raw_files:
+        print("ERROR: Нет raw CSV файлов в data/raw/")
+        return
+    
+    # Обработать каждый файл
+    processed_count = 0
+    for file in raw_files:
+        file_path = os.path.join(raw_dir, file)
+        enrich_weather_data(file_path)
+        processed_count += 1
     
     # Лог
-    log_filename = f"aggregation_log_{date_str}.txt"
-    log_path = os.path.join(log_dir, log_filename)
+    log_path = os.path.join(log_dir, "enriched_log.txt")
     with open(log_path, 'w', encoding='utf-8') as log_file:
-        log_file.write(f"Обработан файл: {enriched_file}\n")
-        log_file.write(f"Количество записей: {len(df)}\n")
-        log_file.write("Созданные файлы:\n")
-        log_file.write("- travel_recommendations.csv: топ-3 городов, stay_home, рекомендации, предупреждения\n")
-        log_file.write("- city_tourism_rating.csv: средний comfort_index и активность по городам\n")
-        log_file.write("- federal_districts_summary.csv: подсчет комфортных городов по округам\n")
-        log_file.write("Логика:\n")
-        log_file.write("- Топ-3: сортировка по comfort_index, уникальные\n")
-        log_file.write("- Stay_home: comfort_index < 10\n")
-        log_file.write("- Рекомендации: на основе comfort_index и сезона\n")
-        log_file.write("- Предупреждения: pop > 0.7 или visibility < 5000\n")
+        log_file.write(f"Обработано файлов: {len(raw_files)} ({', '.join(raw_files)})\n")
+        log_file.write(f"Успешно обработано: {processed_count}\n")
+        log_file.write(f"Дата обработки: {datetime.now().strftime('%Y-%m-%d %H:%M')}\n")
+        log_file.write("Comfort_index рассчитан по формуле; Recommended_activity: активный/культурный туризм или домашний отдых\n")
+        log_file.write("Tourist_season_match: да/нет на основе текущего месяца\n")
+        if processed_count < len(raw_files):
+            log_file.write("Предупреждение: Некоторые файлы не обработаны\n")
     
-    print(f"Aggregated отчеты сохранены в {aggregated_dir}")
-    print(f"Лог сохранен в {log_path}")
+    print(f"Enrichment completed. Log: {log_path}")
 
-# Запуск
 if __name__ == "__main__":
-    create_aggregated_reports()
+    main()
