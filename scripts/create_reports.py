@@ -54,70 +54,94 @@ def create_reports():
     df_city_rating = df_city_rating.sort_values('comfort_index').rename(columns={'comfort_index': 'avg_comfort_index'})
     # Добавить as_of_date в витрину
     df_city_rating['as_of_date'] = datetime.now().strftime('%Y-%m-%d %H:%M')
-    df_city_rating.to_csv(os.path.join(reports_dir, "city_tourism_rating.csv"), index=False, encoding='utf-8')
+    
+    # Дополнение: Если файл существует, читаем и append, иначе создаем
+    city_rating_path = os.path.join(reports_dir, "city_tourism_rating.csv")
+    if os.path.exists(city_rating_path):
+        existing_df = pd.read_csv(city_rating_path, encoding='utf-8')
+        df_city_rating = pd.concat([existing_df, df_city_rating], ignore_index=True)
+    df_city_rating.to_csv(city_rating_path, index=False, encoding='utf-8')
     
     # Витрина 2: Сводка по федеральным округам
-    df_district_summary = df_all.groupby('federal_district').agg({
-        'temperature': 'mean',
-        'comfort_index': lambda x: (x < 20).sum()  # Количество комфортных городов
+    # Сначала группируем по city_name для уникальных городов
+    df_city_agg = df_all.groupby('city_name').agg({
+        'federal_district': 'first',
+        'comfort_index': 'mean',
+        'temperature': 'mean'
     }).reset_index()
-    df_district_summary['avg_temperature'] = df_district_summary['temperature'].round(2)
-    df_district_summary['comfortable_cities_count'] = df_district_summary['comfort_index']
+    df_city_agg['avg_comfort_index'] = df_city_agg['comfort_index'].round(2)
+    df_city_agg['avg_temperature'] = df_city_agg['temperature'].round(2)
+    
+    # Теперь группируем по district
+    df_district_summary = df_city_agg.groupby('federal_district').agg({
+        'avg_temperature': 'mean',
+        'avg_comfort_index': lambda x: (x > 15).sum()  # Количество комфортных городов (avg_comfort > 15, адаптируйте порог)
+    }).reset_index()
+    df_district_summary['avg_temperature'] = df_district_summary['avg_temperature'].round(2)
+    df_district_summary['comfortable_cities_count'] = df_district_summary['avg_comfort_index']
     df_district_summary['general_recommendation'] = df_district_summary.apply(
         lambda row: "Рекомендуется посетить" if row['avg_temperature'] > 10 and row['comfortable_cities_count'] > 0 else "Лучше остаться дома", axis=1
     )
     df_district_summary = df_district_summary[['federal_district', 'avg_temperature', 'comfortable_cities_count', 'general_recommendation']]
     # Добавить as_of_date в витрину
     df_district_summary['as_of_date'] = datetime.now().strftime('%Y-%m-%d %H:%M')
-    df_district_summary.to_csv(os.path.join(reports_dir, "federal_districts_summary.csv"), index=False, encoding='utf-8')
     
-  # Витрина 3: Отчет для турагентств (travel_recommendations.csv)
-    df_travel_rec = df_all.copy()
-    # Топ-3 для поездок: Просто топ-3 лучших по comfort_index (descending), без фильтра по recommended_activity
-    top_cities = df_travel_rec.sort_values('comfort_index', ascending=False).head(3)[['city_name', 'comfort_index']]
-    stay_home_cities = df_travel_rec[df_travel_rec['recommended_activity'] == "домашний отдых"][['city_name', 'comfort_index']]
+    # Дополнение
+    district_summary_path = os.path.join(reports_dir, "federal_districts_summary.csv")
+    if os.path.exists(district_summary_path):
+        existing_df = pd.read_csv(district_summary_path, encoding='utf-8')
+        df_district_summary = pd.concat([existing_df, df_district_summary], ignore_index=True)
+    df_district_summary.to_csv(district_summary_path, index=False, encoding='utf-8')
     
-    # Специальные рекомендации: Группировка по городу, конкатенация уникальных советов
-    df_special = df_travel_rec.groupby('city_name').agg({
-        'pop': 'first',  # Берем первое значение для простоты
-        'temperature': 'first'
+    # Витрина 3: Отчет для турагентств (travel_recommendations.csv)
+    # Группируем по city_name для уникальных
+    df_city_agg2 = df_all.groupby('city_name').agg({
+        'comfort_index': 'mean',
+        'recommended_activity': lambda x: x.mode()[0] if not x.mode().empty else 'неизвестно',
+        'pop': 'mean',
+        'temperature': 'mean',
+        'clouds': 'mean',
+        'humidity': 'mean'
     }).reset_index()
-    df_special['special_recommendations'] = df_special.apply(
+    
+    # Топ-3 для поездок: Только города с recommended_activity != "домашний отдых", сортировка по avg_comfort_index descending
+    df_for_travel = df_city_agg2[df_city_agg2['recommended_activity'] != "домашний отдых"]
+    top_cities = df_for_travel.sort_values('comfort_index', ascending=False).head(3)[['city_name', 'comfort_index']]
+    top_cities['comfort_index'] = top_cities['comfort_index'].round(2)
+    
+    stay_home_cities = df_city_agg2[df_city_agg2['recommended_activity'] == "домашний отдых"][['city_name', 'comfort_index']]
+    stay_home_cities['comfort_index'] = stay_home_cities['comfort_index'].round(2)
+    
+    # Объединяем special_recommendations и weather_warnings в additional_notes
+    df_city_agg2['additional_notes'] = df_city_agg2.apply(
         lambda row: (
             ("Взять зонт" if row['pop'] > 0.5 else "") +
-            ("; Теплую одежду" if row['temperature'] < 10 else "") +
-            ("; Солнцезащитный крем" if row['temperature'] > 25 else "")
-        ).strip("; "), axis=1
-    )
-    special_recs_str = '; '.join(df_special[df_special['special_recommendations'] != '']['special_recommendations'].unique())  # Уникальные рекомендации
-    
-    # Уведомления о плохой погоде: Аналогично, группировка и уникализация
-    df_warnings = df_travel_rec.groupby('city_name').agg({
-        'temperature': 'first',
-        'pop': 'first',
-        'clouds': 'first',
-        'humidity': 'first'
-    }).reset_index()
-    df_warnings['weather_warnings'] = df_warnings.apply(
-        lambda row: (
-            ("Очень холодно, риск обморожения" if row['temperature'] < 0 else "") +
+            ("; Взять теплую одежду" if row['temperature'] < 10 else "") +
+            ("; Солнцезащитный крем" if row['temperature'] > 25 else "") +
+            ("; Очень холодно, риск обморожения" if row['temperature'] < 0 else "") +
             ("; Сильные осадки, возможно снег/дождь" if row['pop'] > 0.8 else "") +
             ("; Плохая видимость из-за тумана/облачности" if row['clouds'] > 80 or row['humidity'] > 90 else "")
         ).strip("; "), axis=1
     )
-    weather_warns_str = '; '.join(df_warnings[df_warnings['weather_warnings'] != '']['weather_warnings'].unique())  # Уникальные предупреждения
+    additional_notes_str = '; '.join(df_city_agg2[df_city_agg2['additional_notes'] != '']['additional_notes'].unique())  # Уникальные
     
     # Создать сводный DataFrame для витрины
     mart3_data = {
         'top_3_cities': [', '.join(top_cities['city_name'].tolist())],
         'stay_home_cities': [', '.join(stay_home_cities['city_name'].tolist())],
-        'special_recommendations': [special_recs_str],
-        'weather_warnings': [weather_warns_str]
+        'additional_notes': [additional_notes_str]
     }
     df_mart3 = pd.DataFrame(mart3_data)
     # Добавить as_of_date в витрину
     df_mart3['as_of_date'] = datetime.now().strftime('%Y-%m-%d %H:%M')
-    df_mart3.to_csv(os.path.join(reports_dir, "travel_recommendations.csv"), index=False, encoding='utf-8')
+    
+    # Дополнение
+    travel_rec_path = os.path.join(reports_dir, "travel_recommendations.csv")
+    if os.path.exists(travel_rec_path):
+        existing_df = pd.read_csv(travel_rec_path, encoding='utf-8')
+        df_mart3 = pd.concat([existing_df, df_mart3], ignore_index=True)
+    df_mart3.to_csv(travel_rec_path, index=False, encoding='utf-8')
+    
     # Лог
     log_path = os.path.join(log_dir, "reports_log.txt")
     with open(log_path, 'w', encoding='utf-8') as log_file:
@@ -126,7 +150,7 @@ def create_reports():
         log_file.write(f"Дата загрузки: {datetime.now().strftime('%Y-%m-%d %H:%M')}\n")
         log_file.write("Витрина 1: Рейтинг городов (city_tourism_rating.csv) - сортировка по avg_comfort_index\n")
         log_file.write("Витрина 2: Сводка по округам (federal_districts_summary.csv) - средняя temp, комфортные города\n")
-        log_file.write("Витрина 3: Рекомендации (travel_recommendations.csv) - топ-3, дома, спец. советы, уведомления о погоде\n")
+        log_file.write("Витрина 3: Рекомендации (travel_recommendations.csv) - топ-3, дома, дополнительные заметки\n")
     
     print(f"Отчеты созданы в {reports_dir} на основе всех данных за период")
     print(f"Лог: {log_path}")
