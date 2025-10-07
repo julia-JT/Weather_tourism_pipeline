@@ -115,8 +115,8 @@ jobs:
     
     - name: Train weather model and generate forecasts
       run: |
-        python train_weather_model.py  # Запускает обучение, прогноз и визуализации
-    
+        python scripts/train_weather_model.py  # Исправлено: скрипт в scripts/, запускает обучение, прогноз и визуализации
+        
     - name: Verify files after training and visualizations
       run: |
         echo "Contents of data/ after training:"
@@ -137,7 +137,7 @@ jobs:
         git config --local user.name "GitHub Action"
         git add data/models/ data/visualizations/ README.md  # Добавляет прогнозы, визуализации и README
         git status  # Покажет, что добавлено
-        git commit -m "Update forecasts, visualizations, and README" --allow-empty
+        git commit -m "Update forecasts, visualizations, and README" || echo "No changes to commit"
         git push https://${{ github.actor }}:${{ secrets.PAT }}@github.com/${{ github.repository }}.git ${{ github.ref_name }}
     
     - name: Verify push
