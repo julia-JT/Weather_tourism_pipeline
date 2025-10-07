@@ -6,11 +6,14 @@ from datetime import datetime, timedelta
 import numpy as np
 import pickle
 
-# Директории
-ENRICHED_DIR = "data/enriched"
-MODELS_DIR = "data/models"
-OUTPUT_DIR = "data/models/forecast"
-VISUALIZATIONS_DIR = "data/visualizations"
+# Директория скрипта (где лежит train_weather_model.py)
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+
+# Директории (теперь собираются относительно SCRIPT_DIR)
+ENRICHED_DIR = os.path.join(SCRIPT_DIR, "..", "data", "enriched")
+MODELS_DIR = os.path.join(SCRIPT_DIR, "..", "data", "models")
+OUTPUT_DIR = os.path.join(SCRIPT_DIR, "..", "data", "models", "forecast")
+VISUALIZATIONS_DIR = os.path.join(SCRIPT_DIR, "..", "data", "visualizations")
 
 # Порог для переобучения (MAE > этого значения -> переобучить)
 MAE_THRESHOLD = 5.0  # В градусах Цельсия
