@@ -1,30 +1,38 @@
-name: Weather and Tourism Pipeline
+name: Data Pipeline
 
 on:
   schedule:
-    - cron: '0 * * * *'  # Каждый час (первый запуск в 4:00 UTC = 7:00 МСК)
-  workflow_dispatch:     # Ручной запуск для теста или старта в 7:00 МСК
+    - cron: '0 * * * *'  # Каждый час
+  workflow_dispatch:  # Ручной запуск
 
 jobs:
-  run-pipeline:
+  build:
     runs-on: ubuntu-latest
+    env:  # Глобальные переменные окружения для API-ключей (замените на ваши секреты)
+      OPENWEATHER_API_KEY: ${{ secrets.OPENWEATHER_API_KEY }}
 
     steps:
-    - uses: actions/checkout@v3
+    - name: Checkout code
+      uses: actions/checkout@v3
 
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
-        python-version: '3.9'
+        python-version: '3.9'  # Или ваша версия
 
-    - name: Run collect data
-      run: python scripts/collect_data.py
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install requests pandas # Замените на ваши реальные пакеты (например, добавьте openpyxl или matplotlib, если нужны)
 
-    - name: Run clean data
-      run: python scripts/clean_data.py
+    - name: Run data collection
+      run: python collect_data.py
 
-    - name: Run enrich data
-      run: python scripts/enrich_data.py
+    - name: Run data cleaning
+      run: python clean_data.py
 
-    - name: Run create reports
-      run: python scripts/create_reports.py
+    - name: Run data enrichment
+      run: python enrich_data.py
+
+    - name: Run report creation
+      run: python create_reports.py
