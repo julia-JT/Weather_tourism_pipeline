@@ -1,100 +1,115 @@
 import pandas as pd
 import os
 from datetime import datetime, timedelta
-from sklearn.ensemble import RandomForestRegressor
-from sklearn.metrics import mean_squared_error
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import mean_absolute_error
 import pickle
 
-# Папки (относительные пути от scripts/ к data/)
+# Папки
 enriched_dir = os.path.join(os.path.dirname(__file__), '..', 'data', 'enriched')
 models_dir = os.path.join(os.path.dirname(__file__), '..', 'data', 'models')
 forecasts_dir = os.path.join(os.path.dirname(__file__), '..', 'data', 'forecasts')
-
-# Создаем папки
 os.makedirs(models_dir, exist_ok=True)
 os.makedirs(forecasts_dir, exist_ok=True)
 
+# Функция для чтения и объединения всех enriched файлов (используя collection_time как as_of_date)
+def load_and_merge_enriched_data():
+    all_files = [f for f in os.listdir(enriched_dir) if f.endswith('.csv')]
+    df_list = []
+    
+    for file in all_files:
+        file_path = os.path.join(enriched_dir, file)
+        df = pd.read_csv(file_path, encoding='utf-8')
+        
+        # Использовать collection_time как as_of_date (предполагаем, что оно в формате datetime или строке)
+        if 'collection_time' in df.columns:
+            df['as_of_date'] = pd.to_datetime(df['collection_time'])  # Преобразовать в datetime
+        else:
+            print(f"Поле 'collection_time' отсутствует в {file}. Пропускаем файл.")
+            continue
+        
+        df_list.append(df)
+    
+    # Объединить все данные
+    df_all = pd.concat(df_list, ignore_index=True)
+    df_all = df_all.sort_values('as_of_date').drop_duplicates()  # Сортировка и удаление дубликатов
+    return df_all
+
+# Функция для подготовки данных с таргетом на завтра
+def prepare_data_for_forecast(df):
+    # Сортировка по дате и городу (предполагаем, что есть столбец 'city_name')
+    df = df.sort_values(['city_name', 'as_of_date'])
+    
+    # Создать таргет: comfort_index на следующий день
+    df['next_day_comfort_index'] = df.groupby('city_name')['comfort_index'].shift(-1)
+    df = df.dropna(subset=['next_day_comfort_index'])  # Удалить строки без таргета
+    
+    # Признаки (адаптируй под твои столбцы)
+    features = ['temperature', 'humidity', 'wind_speed', 'precipitation']  # Примеры признаков
+    target = 'next_day_comfort_index'
+    
+    # Фильтр: только строки с полными данными
+    df = df.dropna(subset=features + [target])
+    
+    return df[features], df[target], df
+
 # Основная функция обучения и прогноза
 def train_and_forecast():
-    # Найти все enriched CSV
-    enriched_files = [f for f in os.listdir(enriched_dir) if f.startswith("weather_enriched_") and f.endswith(".csv")]
-    if not enriched_files:
-        print("ERROR: Нет enriched CSV файлов в data/enriched/")
+    # Шаг 1: Загрузить и объединить данные
+    df_all = load_and_merge_enriched_data()
+    if df_all.empty:
+        print("Нет данных в enriched_dir. Проверь папку и поле 'collection_time'.")
         return
     
-    # Объединить все файлы в один DataFrame
-    dfs = []
-    for file in enriched_files:
-        path = os.path.join(enriched_dir, file)
-        try:
-            df = pd.read_csv(path, encoding='utf-8')
-            dfs.append(df)
-        except Exception as e:
-            print(f"WARNING: Ошибка чтения {path}: {e}")
-    
-    if not dfs:
-        print("ERROR: Нет валидных данных для обучения")
-        return
-    
-    combined_df = pd.concat(dfs, ignore_index=True)
-    combined_df['date'] = pd.to_datetime(combined_df['date'])
-    combined_df = combined_df.sort_values(by=['city_name', 'date']).reset_index(drop=True)
-    
-    # Создать фичи и таргет
-    combined_df['temperature_next_day'] = combined_df.groupby('city_name')['temperature'].shift(-1)  # Таргет: temp на следующий день
-    # Фичи: текущие значения (предыдущий день для прогноза)
-    features = ['temperature', 'pop', 'clouds', 'humidity', 'comfort_index']
-    combined_df = combined_df.dropna(subset=['temperature_next_day'] + features)  # Убрать строки без таргета
-    
-    X = combined_df[features]
-    y = combined_df['temperature_next_day']
-    
+    # Шаг 2: Подготовить данные
+    X, y, df = prepare_data_for_forecast(df_all)
     if X.empty or y.empty:
-        print("ERROR: Недостаточно данных для обучения")
+        print("Недостаточно данных для обучения.")
         return
     
-    # Обучить модель
-    model = RandomForestRegressor(n_estimators=100, random_state=42)
-    model.fit(X, y)
+    # Шаг 3: Разделить на train/test
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
     
-    # Оценка качества (MSE на тренировочных данных)
-    y_pred = model.predict(X)
-    mse = mean_squared_error(y, y_pred)
+    # Шаг 4: Обучить модель (линейная регрессия для примера)
+    model = LinearRegression()
+    model.fit(X_train, y_train)
     
-    # Сохранить модель
+    # Оценка
+    y_pred = model.predict(X_test)
+    mae = mean_absolute_error(y_test, y_pred)
+    print(f"MAE на тесте: {mae:.2f}")
+    
+    # Шаг 5: Сохранить модель
     model_path = os.path.join(models_dir, 'weather_model.pkl')
     with open(model_path, 'wb') as f:
         pickle.dump(model, f)
+    print(f"Модель сохранена в {model_path}")
     
-    # Прогноз на завтра: Взять последний день для каждого города
-    today = datetime.now().date()
-    last_day_data = combined_df[combined_df['date'] == pd.to_datetime(today - timedelta(days=1))]  # Последний полный день (вчера)
-    if last_day_data.empty:
-        print("WARNING: Нет данных за последний день для прогноза")
-        forecast_df = pd.DataFrame()
-    else:
-        forecast_X = last_day_data[features]
-        forecast_temp = model.predict(forecast_X)
-        forecast_df = last_day_data[['city_name']].copy()
-        forecast_df['forecast_date'] = today + timedelta(days=1)  # Завтра
-        forecast_df['predicted_temperature'] = forecast_temp.round(2)
+    # Шаг 6: Прогноз на завтра
+    # Использовать последние данные (максимальный as_of_date)
+    latest_data = df[df['as_of_date'] == df['as_of_date'].max()]
+    if latest_data.empty:
+        print("Нет последних данных для прогноза.")
+        return
+    
+    # Признаки для прогноза (последние значения)
+    latest_features = latest_data[features].iloc[0:1]  # Берем первую строку (предполагаем один город или усредни)
+    forecast_comfort_index = model.predict(latest_features)[0]
+    
+    # Дата завтра
+    tomorrow = (df['as_of_date'].max() + timedelta(days=1)).strftime('%Y-%m-%d')
     
     # Сохранить прогноз
-    date_str = datetime.now().strftime("%Y%m%d")
-    forecast_path = os.path.join(forecasts_dir, f"forecast_{date_str}.csv")
+    forecast_df = pd.DataFrame({
+        'forecast_date': [tomorrow],
+        'predicted_comfort_index': [forecast_comfort_index],
+        'based_on_date': [df['as_of_date'].max().strftime('%Y-%m-%d %H:%M:%S')]  # Изменено на YYYY-MM-DD hh:mm:ss
+    })
+    forecast_path = os.path.join(forecasts_dir, 'forecast_tomorrow.csv')
     forecast_df.to_csv(forecast_path, index=False, encoding='utf-8')
-    
-    # Лог
-    log_path = os.path.join(models_dir, f"training_log_{date_str}.txt")
-    with open(log_path, 'w', encoding='utf-8') as log_file:
-        log_file.write(f"Обучена модель на {len(combined_df)} записях из {len(enriched_files)} файлов\n")
-        log_file.write(f"MSE на тренировочных данных: {mse:.4f}\n")
-        log_file.write(f"Модель сохранена: {model_path}\n")
-        log_file.write(f"Прогноз на завтра сохранен: {forecast_path}\n")
-        if not forecast_df.empty:
-            log_file.write(f"Прогноз для {len(forecast_df)} городов\n")
-    
-    print(f"Модель обучена, прогноз сохранен. Лог: {log_path}")
+    print(f"Прогноз на завтра ({tomorrow}): comfort_index = {forecast_comfort_index:.2f}")
+    print(f"Прогноз сохранён в {forecast_path}")
 
 # Запуск
 if __name__ == "__main__":
