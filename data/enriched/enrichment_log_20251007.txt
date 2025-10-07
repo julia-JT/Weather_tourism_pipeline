@@ -1,9 +1,0 @@
-Обработан файл: weather_cleaned_20251007.csv
-Количество записей: 25
-Добавленные поля:
-- Из справочника: federal_district, timezone, population, tourism_season
-- Вычисляемые: current_season, comfort_index, recommended_activity, tourist_season_match
-Формулы:
-- comfort_index: (abs(temp-20)*0.5 + abs(humidity-50)/10 + wind_speed*2 + max(0, (10000-visibility)/1000) + pop*10)
-- recommended_activity: на основе comfort_index, сезона и pop (прогулки не рекомендуются при pop >= 0.5)
-- tourist_season_match: сравнение текущего месяца с tourism_season
