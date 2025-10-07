@@ -112,3 +112,25 @@ jobs:
         name: workflow-logs
         path: .  # Или укажите конкретный файл логов, если скрипты пишут в него
         if-no-files-found: warn
+    
+    
+    
+    - name: Check git status (диагностика)  # Добавьте этот шаг
+      run: |
+        git status
+        ls -la my-new-folder/  # Замените на вашу папку
+
+    - name: Configure Git  # Добавьте этот шаг
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+
+    - name: Add, commit, and push  # Добавьте этот шаг
+      run: |
+        git add .
+        git status  # Покажет, что добавлено
+        git commit -m "Add/update folder and file via Actions" --allow-empty
+        git push https://${{ github.actor }}:${{ secrets.PAT }}@github.com/${{ github.repository }}.git ${{ github.ref_name }}
+
+    - name: Verify push (опционально)  # Добавьте этот шаг, если хотите
+      run: echo "Push completed. Check repo for changes."
