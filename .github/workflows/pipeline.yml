@@ -118,7 +118,11 @@ jobs:
     - name: Train weather model and generate forecasts
       run: |
         python scripts/train_weather_model.py  # Исправлено: скрипт в scripts/, запускает обучение, прогноз и визуализации
-        
+    - name: Check directories
+      run: |
+        ls -la data/  # Проверьте содержимое data/
+        ls -la data/visualizations/ || echo "Directory does not exist"  # Проверьте visualizations/
+       
     - name: Verify files after training and visualizations
       run: |
         echo "Contents of data/ after training:"
@@ -139,8 +143,14 @@ jobs:
         git config --local user.name "GitHub Action"
         git add data/models/ data/visualizations/ README.md  # Добавляет прогнозы, визуализации и README
         git status  # Покажет, что добавлено
-        git commit -m "Update forecasts, visualizations, and README" || echo "No changes to commit"
-        git push https://${{ github.actor }}:${{ secrets.PAT }}@github.com/${{ github.repository }}.git ${{ github.ref_name }}
-    
+        run: |
+          if [ -d "data/visualizations" ] && [ "$(ls -A data/visualizations)" ]; then
+          git add data/visualizations/
+          git commit -m "Add generated visualizations"
+          git push https://${{ github.actor }}:${{ secrets.PAT }}@github.com/${{ github.repository }}.git ${{ github.ref_name}}
+        else
+          echo "No files to commit in data/visualizations/"
+        fi
+        
     - name: Verify push
       run: echo "Push completed. Check repo for changes."
