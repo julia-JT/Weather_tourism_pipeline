@@ -12,27 +12,36 @@ os.makedirs(reports_dir, exist_ok=True)
 
 # Основная функция
 def create_reports():
-    # Найти последний enriched CSV
+    # Найти все enriched CSV файлы
     enriched_files = [f for f in os.listdir(enriched_dir) if f.startswith("weather_enriched_") and f.endswith(".csv")]
     if not enriched_files:
         print("ERROR: Нет enriched CSV файлов в data/enriched/")
         return
-    enriched_files.sort(reverse=True)
-    enriched_file = enriched_files[0]
-    enriched_path = os.path.join(enriched_dir, enriched_file)
     
-    # Прочитать enriched CSV
-    try:
-        df = pd.read_csv(enriched_path, encoding='utf-8')
-    except Exception as e:
-        print(f"ERROR: Ошибка чтения {enriched_path}: {e}")
+    # Прочитать и объединить все enriched файлы
+    dfs = []
+    for file in enriched_files:
+        file_path = os.path.join(enriched_dir, file)
+        try:
+            df = pd.read_csv(file_path, encoding='utf-8')
+            dfs.append(df)
+        except Exception as e:
+            print(f"ERROR: Ошибка чтения {file_path}: {e}")
+            continue
+    if not dfs:
+        print("ERROR: Не удалось прочитать ни одного файла")
         return
     
-    # Дата для имен файлов
-    date_str = datetime.now().strftime("%Y%m%d")
+    # Объединить все данные
+    df_all = pd.concat(dfs, ignore_index=True)
+    
+    # Добавить столбец as_of_date (формат YYYY-MM-DD hh:mm)
+    df_all['as_of_date'] = datetime.now().strftime('%Y-%m-%d %H:%M')
+    
+    # Теперь df_all содержит все данные за весь период с as_of_date
     
     # Витрина 1: Рейтинг городов для туризма
-    df_city_rating = df.groupby('city_name').agg({
+    df_city_rating = df_all.groupby('city_name').agg({
         'comfort_index': 'mean',
         'recommended_activity': lambda x: x.mode()[0] if not x.mode().empty else 'неизвестно',  # Самая частая активность
         'tourist_season_match': lambda x: x.mode()[0] if not x.mode().empty else 'неизвестно',
@@ -43,10 +52,12 @@ def create_reports():
         lambda row: f"{row['recommended_activity']} в сезон" if row['tourist_season_match'] == 'да' else f"{row['recommended_activity']} вне сезона", axis=1
     )
     df_city_rating = df_city_rating.sort_values('comfort_index').rename(columns={'comfort_index': 'avg_comfort_index'})
-    df_city_rating.to_csv(os.path.join(reports_dir, f"city_tourism_rating_{date_str}.csv"), index=False, encoding='utf-8')
+    # Добавить as_of_date в витрину
+    df_city_rating['as_of_date'] = datetime.now().strftime('%Y-%m-%d %H:%M')
+    df_city_rating.to_csv(os.path.join(reports_dir, "city_tourism_rating.csv"), index=False, encoding='utf-8')
     
     # Витрина 2: Сводка по федеральным округам
-    df_district_summary = df.groupby('federal_district').agg({
+    df_district_summary = df_all.groupby('federal_district').agg({
         'temperature': 'mean',
         'comfort_index': lambda x: (x < 20).sum()  # Количество комфортных городов
     }).reset_index()
@@ -56,10 +67,12 @@ def create_reports():
         lambda row: "Рекомендуется посетить" if row['avg_temperature'] > 10 and row['comfortable_cities_count'] > 0 else "Лучше остаться дома", axis=1
     )
     df_district_summary = df_district_summary[['federal_district', 'avg_temperature', 'comfortable_cities_count', 'general_recommendation']]
-    df_district_summary.to_csv(os.path.join(reports_dir, f"federal_districts_summary_{date_str}.csv"), index=False, encoding='utf-8')
+    # Добавить as_of_date в витрину
+    df_district_summary['as_of_date'] = datetime.now().strftime('%Y-%m-%d %H:%M')
+    df_district_summary.to_csv(os.path.join(reports_dir, "federal_districts_summary.csv"), index=False, encoding='utf-8')
     
     # Витрина 3: Отчет для турагентств
-    df_travel_rec = df.copy()
+    df_travel_rec = df_all.copy()
     # Топ-3 для поездок: Сортировка по comfort_index, фильтр по recommended_activity
     top_cities = df_travel_rec[df_travel_rec['recommended_activity'] != "домашний отдых"].sort_values('comfort_index').head(3)[['city_name', 'comfort_index']]
     stay_home_cities = df_travel_rec[df_travel_rec['recommended_activity'] == "домашний отдых"][['city_name', 'comfort_index']]
@@ -90,17 +103,21 @@ def create_reports():
         'weather_warnings': ['; '.join(weather_warns['weather_warnings'].tolist())]  # Новое поле
     }
     df_mart3 = pd.DataFrame(mart3_data)
-    df_mart3.to_csv(os.path.join(reports_dir, f"travel_recommendations_{date_str}.csv"), index=False, encoding='utf-8')
+    # Добавить as_of_date в витрину
+    df_mart3['as_of_date'] = datetime.now().strftime('%Y-%m-%d %H:%M')
+    df_mart3.to_csv(os.path.join(reports_dir, "travel_recommendations.csv"), index=False, encoding='utf-8')
     
     # Лог
-    log_path = os.path.join(log_dir, f"reports_log_{date_str}.txt")
+    log_path = os.path.join(log_dir, "reports_log.txt")
     with open(log_path, 'w', encoding='utf-8') as log_file:
-        log_file.write(f"Обработан файл: {enriched_file}\n")
+        log_file.write(f"Обработано файлов: {len(enriched_files)} ({', '.join(enriched_files)})\n")
+        log_file.write(f"Всего строк данных: {len(df_all)}\n")
+        log_file.write(f"Дата загрузки: {datetime.now().strftime('%Y-%m-%d %H:%M')}\n")
         log_file.write("Витрина 1: Рейтинг городов (city_tourism_rating.csv) - сортировка по avg_comfort_index\n")
         log_file.write("Витрина 2: Сводка по округам (federal_districts_summary.csv) - средняя temp, комфортные города\n")
         log_file.write("Витрина 3: Рекомендации (travel_recommendations.csv) - топ-3, дома, спец. советы, уведомления о погоде\n")
     
-    print(f"Отчеты созданы в {reports_dir}")
+    print(f"Отчеты созданы в {reports_dir} на основе всех данных за период")
     print(f"Лог: {log_path}")
 
 # Запуск
