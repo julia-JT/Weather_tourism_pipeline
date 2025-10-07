@@ -3,4 +3,5 @@ requests
 pandas
 numpy
 matplotlib
+prophet
 # Добавьте другие, если знаете (например, из ошибок импорта в коде)
