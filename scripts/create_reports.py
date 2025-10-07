@@ -71,7 +71,8 @@ def create_reports():
     df_city_agg['avg_temperature'] = df_city_agg['temperature'].round(2)
     
     # Фильтруем города, подходящие для туризма: comfort_index > 15 и recommended_activity != "домашний отдых"
-    df_city_agg_filtered = df_city_agg[(df_city_agg['avg_comfort_index'] > 15) & (df_city_agg['recommended_activity'] != 'домашний отдых')]
+    df_city_agg_filtered = df_city_agg[df_city_agg['recommended_activity'] != 'домашний отдых']
+    # df_city_agg[(df_city_agg['avg_comfort_index'] > 15) & (df_city_agg['recommended_activity'] != 'домашний отдых')]
     
     # Получить все уникальные округа
     all_districts = df_city_agg['federal_district'].unique()
