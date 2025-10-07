@@ -67,3 +67,7 @@ Weather_tourism_pipeline
 ## Визуализации
 ![Comfort Index](data/visualizations/comfort_index.png)
 ![Temperature](data/visualizations/temperature.png)
+
+## Визуализации
+![Comfort Index](data/visualizations/comfort_index.png)
+![Temperature](data/visualizations/temperature.png)
