@@ -73,18 +73,25 @@ def create_reports():
     # Фильтруем города, подходящие для туризма: comfort_index > 15 и recommended_activity != "домашний отдых"
     df_city_agg_filtered = df_city_agg[(df_city_agg['avg_comfort_index'] > 15) & (df_city_agg['recommended_activity'] != 'домашний отдых')]
     
-    # Теперь группируем по district
-    df_district_summary = df_city_agg_filtered.groupby('federal_district').agg({
-        'avg_temperature': 'mean',
-        'avg_comfort_index': 'count'  # Теперь это count комфортных и подходящих для туризма городов
-    }).reset_index()
-    df_district_summary['avg_temperature'] = df_district_summary['avg_temperature'].round(2)
-    df_district_summary['comfortable_cities_count'] = df_district_summary['avg_comfort_index']
+    # Получить все уникальные округа
+    all_districts = df_city_agg['federal_district'].unique()
+    df_district_summary = pd.DataFrame({'federal_district': all_districts})
+    
+    # Средняя температура по ВСЕМ городам в округе
+    temp_summary = df_city_agg.groupby('federal_district')['avg_temperature'].mean().round(2).reset_index()
+    df_district_summary = df_district_summary.merge(temp_summary, on='federal_district', how='left')
+    
+    # Количество комфортных городов (из filtered)
+    comfortable_count = df_city_agg_filtered.groupby('federal_district').size().reset_index(name='comfortable_cities_count')
+    df_district_summary = df_district_summary.merge(comfortable_count, on='federal_district', how='left').fillna(0)
+    df_district_summary['comfortable_cities_count'] = df_district_summary['comfortable_cities_count'].astype(int)
+    
+    # Рекомендация
     df_district_summary['general_recommendation'] = df_district_summary.apply(
         lambda row: "Рекомендуется посетить" if row['avg_temperature'] > 10 and row['comfortable_cities_count'] > 0 else "Лучше остаться дома", axis=1
     )
-    df_district_summary = df_district_summary[['federal_district', 'avg_temperature', 'comfortable_cities_count', 'general_recommendation']]
-    # Добавить as_of_date в витрину
+    
+    # Добавить as_of_date
     df_district_summary['as_of_date'] = datetime.now().strftime('%Y-%m-%d %H:%M')
     
     # Перезапись витрины (без аккумуляции истории)
@@ -145,7 +152,7 @@ def create_reports():
         log_file.write(f"Всего строк данных: {len(df_all)}\n")
         log_file.write(f"Дата загрузки: {datetime.now().strftime('%Y-%m-%d %H:%M')}\n")
         log_file.write("Витрина 1: Рейтинг городов (city_tourism_rating.csv) - сортировка по avg_comfort_index\n")
-        log_file.write("Витрина 2: Сводка по округам (federal_districts_summary.csv) - средняя temp, комфортные города (comfort > 15 и не домашний отдых)\n")
+        log_file.write("Витрина 2: Сводка по округам (federal_districts_summary.csv) - средняя temp по всем городам, комфортные города (comfort > 15 и не домашний отдых), рекомендация\n")
         log_file.write("Витрина 3: Рекомендации (travel_recommendations.csv) - топ-3, дома, дополнительные заметки\n")
     
     print(f"Отчеты созданы в {reports_dir} на основе всех данных за период")
