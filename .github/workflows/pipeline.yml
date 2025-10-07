@@ -112,7 +112,14 @@ jobs:
         name: workflow-logs
         path: .  # Или укажите конкретный файл логов, если скрипты пишут в него
         if-no-files-found: warn
-       
+    
+    - name: Train weather model and generate forecasts
+      run: |
+        pip install pandas scikit-learn matplotlib
+        python train_weather_model.py  # Предполагаем, что скрипт обновляет data/forecasts.csv на основе data/aggregated_weather.csv
+        git add data/models/forecasts.csv
+        git commit -m "Update forecasts from model"
+        git push  
     
     - name: Check git status (диагностика)  # Добавьте этот шаг
       run: |
