@@ -6,7 +6,7 @@ from collections import defaultdict
 # Папки (предполагаем, что cleaned_data находится в data/cleaned/, а enriched в data/enriched/)
 cleaned_dir = os.path.join(os.path.dirname(__file__), '..', 'data', 'cleaned')
 enriched_dir = os.path.join(os.path.dirname(__file__), '..', 'data', 'enriched')
-cities_ref_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'enriched', 'cities_reference.csv')
+cities_ref_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'cities_reference.csv')
 
 # Создаем папки
 os.makedirs(enriched_dir, exist_ok=True)
@@ -113,6 +113,9 @@ def enrich_weather_data_for_date(date_str, file_paths):
     # Заменяем пустые строки на NaN для корректной обработки
     combined_df = combined_df.replace('', pd.NA)
     
+    # Сохраняем оригинальный city_name (с заглавной русской буквы)
+    combined_df['original_city_name'] = combined_df['city_name']
+    
     # Нормализуем city_name в combined_df для точного совпадения
     combined_df['city_name'] = combined_df['city_name'].str.lower().str.strip()
     
@@ -128,6 +131,10 @@ def enrich_weather_data_for_date(date_str, file_paths):
     combined_df['tourism_season'] = combined_df['tourism_season'].fillna('добавьте город в справочник cities_reference.csv')
     combined_df['timezone'] = combined_df['timezone'].fillna('UTC+3')  # Дефолт
     combined_df['population'] = combined_df['population'].fillna(0)  # Дефолт
+    
+    # Восстанавливаем оригинальный city_name
+    combined_df['city_name'] = combined_df['original_city_name']
+    combined_df = combined_df.drop(columns=['original_city_name'])
     
     # Рассчитываем comfort_index
     combined_df['comfort_index'] = combined_df.apply(calculate_comfort_index, axis=1)
