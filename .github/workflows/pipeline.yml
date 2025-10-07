@@ -112,13 +112,12 @@ jobs:
         name: workflow-logs
         path: .  # Или укажите конкретный файл логов, если скрипты пишут в него
         if-no-files-found: warn
-    
-    
+       
     
     - name: Check git status (диагностика)  # Добавьте этот шаг
       run: |
         git status
-        ls -la my-new-folder/  # Замените на вашу папку
+        ls -la data/  # Замените на вашу папку
 
     - name: Configure Git  # Добавьте этот шаг
       run: |
