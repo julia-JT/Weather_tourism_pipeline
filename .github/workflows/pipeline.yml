@@ -33,7 +33,7 @@ jobs:
         
     - name: Create data directories
       run: |
-        mkdir -p data/raw/openweather_api || echo "Failed to create directories"
+        mkdir -p data/raw/openweather_api data/models data/models/forecast data/visualizations || echo "Failed to create directories"
         
     - name: Run data collection
       run: |
@@ -123,6 +123,10 @@ jobs:
       run: |
         echo "Checking data/ directory:"
         ls -la data/ || echo "data/ directory not found"
+        echo "Checking data/models/ directory:"
+        ls -la data/models/ || echo "data/models/ directory does not exist or is empty"
+        echo "Checking data/models/forecast/ directory:"
+        ls -la data/models/forecast/ || echo "data/models/forecast/ directory does not exist or is empty"
         echo "Checking data/visualizations/ directory:"
         ls -la data/visualizations/ || echo "data/visualizations/ directory does not exist or is empty"
     
