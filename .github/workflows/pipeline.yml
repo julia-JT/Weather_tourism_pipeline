@@ -29,34 +29,45 @@ jobs:
         python -m pip install --upgrade pip
         pip install requests pandas # Замените на ваши реальные пакеты (например, добавьте openpyxl или matplotlib, если нужны)
 
+    - name: Create data directories  # <-- Новый шаг: Создаёт папки, если их нет
+      run: mkdir -p data/raw/openweather_api
+
     - name: Run data collection
       run: python scripts/collect_data.py
-    - name: Upload data files as artifact  # <-- Вставьте сюда
+      
+    - name: Upload data files as artifact after collection  # <-- Уникальный артефакт
+      if: always()  # Загружает даже при ошибке
       uses: actions/upload-artifact@v4
       with:
-        name: collected-data
+        name: collected-data-after-collection
         path: data/
 
     - name: Run data cleaning
       run: python scripts/clean_data.py
-    - name: Upload data files as artifact  # <-- Вставьте сюда
+      
+    - name: Upload data files as artifact after cleaning  # <-- Уникальный артефакт
+      if: always()
       uses: actions/upload-artifact@v4
       with:
-        name: collected-data
+        name: collected-data-after-cleaning
         path: data/
         
     - name: Run data enrichment
       run: python scripts/enrich_data.py
-    - name: Upload data files as artifact  # <-- Вставьте сюда
+      
+    - name: Upload data files as artifact after enrichment  # <-- Уникальный артефакт
+      if: always()
       uses: actions/upload-artifact@v4
       with:
-        name: collected-data
+        name: collected-data-after-enrichment
         path: data/
         
     - name: Run report creation
       run: python scripts/create_reports.py
-    - name: Upload data files as artifact  # <-- Вставьте сюда
+      
+    - name: Upload data files as artifact after reports  # <-- Уникальный артефакт
+      if: always()
       uses: actions/upload-artifact@v4
       with:
-        name: collected-data
+        name: collected-data-after-reports
         path: data/
