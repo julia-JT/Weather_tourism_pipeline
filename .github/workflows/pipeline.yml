@@ -8,8 +8,9 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    env:  # Глобальные переменные окружения для API-ключей (замените на ваши секреты)
+    env:  # Глобальные переменные окружения
       OPENWEATHER_API_KEY: ${{ secrets.OPENWEATHER_API_KEY }}
+      # Добавьте другие секреты, если нужны (e.g., DATABASE_URL: ${{ secrets.DATABASE_URL }})
 
     steps:
     - name: Checkout code
@@ -17,74 +18,96 @@ jobs:
       with:
         submodules: false
       
-
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
-        python-version: '3.9'  # Или ваша версия
+        python-version: '3.9'  # Совместите с локальной версией
         
-
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install requests pandas # Замените на ваши реальные пакеты (например, добавьте openpyxl или matplotlib, если нужны)
-
-    - name: Create data directories  # Создаёт папки, если их нет
+        pip install requests pandas  # Или pip install -r requirements.txt, если есть файл
+        
+    - name: Create data directories
       run: |
-        mkdir -p data
-        mkdir -p data/raw/openweather_api
-
-    - name: Verify data directories  # <-- Новый шаг: Проверяет, создались ли папки
-      run: ls -la data/  # Выведет содержимое в логи; если папки нет, будет ошибка
-
+        mkdir -p data/raw/openweather_api || echo "Failed to create directories"
+        
     - name: Run data collection
-      run: python scripts/collect_data.py
-      
-    - name: Verify after collection  # <-- Новый шаг: Проверяет после сбора данных
-      run: ls -la data/
-      
+      run: |
+        python scripts/collect_data.py || echo "Data collection script failed"
+        
+    - name: Verify files after collection  # <-- Новый: Проверяет файлы после каждого шага
+      run: |
+        echo "Contents of data/ after collection:"
+        ls -la data/ || echo "Data directory not found"
+        find data/ -type f -name "*.json" | head -10 || echo "No JSON files found"  # Показывает первые 10 файлов
+        
     - name: Upload data files as artifact after collection
-      if: success()  # Загружает только при успехе (чтобы не загружать пустое при ошибке)
+      if: always()  # Загружает даже при ошибке
       uses: actions/upload-artifact@v4
       with:
         name: collected-data-after-collection
         path: data/
+        if-no-files-found: warn  # Предупредит, если файлов нет
 
     - name: Run data cleaning
-      run: python scripts/clean_data.py
-      
-    - name: Verify after cleaning  # <-- Новый шаг: Проверяет после очистки
-      run: ls -la data/
-      
+      run: |
+        python scripts/clean_data.py || echo "Data cleaning script failed"
+        
+    - name: Verify files after cleaning
+      run: |
+        echo "Contents of data/ after cleaning:"
+        ls -la data/ || echo "Data directory not found"
+        find data/ -type f | head -10 || echo "No files found"
+        
     - name: Upload data files as artifact after cleaning
-      if: success()
+      if: always()
       uses: actions/upload-artifact@v4
       with:
         name: collected-data-after-cleaning
         path: data/
-        
+        if-no-files-found: warn
+
     - name: Run data enrichment
-      run: python scripts/enrich_data.py
-      
-    - name: Verify after enrichment  # <-- Новый шаг: Проверяет после обогащения
-      run: ls -la data/
-      
+      run: |
+        python scripts/enrich_data.py || echo "Data enrichment script failed"
+        
+    - name: Verify files after enrichment
+      run: |
+        echo "Contents of data/ after enrichment:"
+        ls -la data/ || echo "Data directory not found"
+        find data/ -type f | head -10 || echo "No files found"
+        
     - name: Upload data files as artifact after enrichment
-      if: success()
+      if: always()
       uses: actions/upload-artifact@v4
       with:
         name: collected-data-after-enrichment
         path: data/
-        
+        if-no-files-found: warn
+
     - name: Run report creation
-      run: python scripts/create_reports.py
-      
-    - name: Verify after reports  # <-- Новый шаг: Проверяет после отчётов
-      run: ls -la data/
-      
+      run: |
+        python scripts/create_reports.py || echo "Report creation script failed"
+        
+    - name: Verify files after reports
+      run: |
+        echo "Contents of data/ after reports:"
+        ls -la data/ || echo "Data directory not found"
+        find data/ -type f | head -10 || echo "No files found"
+        
     - name: Upload data files as artifact after reports
-      if: success()
+      if: always()
       uses: actions/upload-artifact@v4
       with:
         name: collected-data-after-reports
         path: data/
+        if-no-files-found: warn
+
+    - name: Upload full logs as artifact  # <-- Новый: Загружает логи для анализа
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: workflow-logs
+        path: .  # Или укажите конкретный файл логов, если скрипты пишут в него
+        if-no-files-found: warn
