@@ -6,7 +6,7 @@ from collections import defaultdict
 # Папки (предполагаем, что cleaned_data находится в data/cleaned/, а enriched в data/enriched/)
 cleaned_dir = os.path.join(os.path.dirname(__file__), '..', 'data', 'cleaned')
 enriched_dir = os.path.join(os.path.dirname(__file__), '..', 'data', 'enriched')
-cities_ref_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'cities_reference.csv')
+cities_ref_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'enriched', 'cities_reference.csv')
 
 # Создаем папки
 os.makedirs(enriched_dir, exist_ok=True)
