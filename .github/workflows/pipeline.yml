@@ -31,12 +31,32 @@ jobs:
 
     - name: Run data collection
       run: python scripts/collect_data.py
+    - name: Upload data files as artifact  # <-- Вставьте сюда
+      uses: actions/upload-artifact@v4
+      with:
+        name: collected-data
+        path: data/
 
     - name: Run data cleaning
       run: python scripts/clean_data.py
-
+    - name: Upload data files as artifact  # <-- Вставьте сюда
+      uses: actions/upload-artifact@v4
+      with:
+        name: collected-data
+        path: data/
+        
     - name: Run data enrichment
       run: python scripts/enrich_data.py
-
+    - name: Upload data files as artifact  # <-- Вставьте сюда
+      uses: actions/upload-artifact@v4
+      with:
+        name: collected-data
+        path: data/
+        
     - name: Run report creation
       run: python scripts/create_reports.py
+    - name: Upload data files as artifact  # <-- Вставьте сюда
+      uses: actions/upload-artifact@v4
+      with:
+        name: collected-data
+        path: data/
