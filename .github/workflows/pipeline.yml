@@ -118,39 +118,43 @@ jobs:
     - name: Train weather model and generate forecasts
       run: |
         python scripts/train_weather_model.py  # Исправлено: скрипт в scripts/, запускает обучение, прогноз и визуализации
+    
     - name: Check directories
       run: |
-        ls -la data/  # Проверьте содержимое data/
-        ls -la data/visualizations/ || echo "Directory does not exist"  # Проверьте visualizations/
-       
+        echo "Checking data/ directory:"
+        ls -la data/ || echo "data/ directory not found"
+        echo "Checking data/visualizations/ directory:"
+        ls -la data/visualizations/ || echo "data/visualizations/ directory does not exist or is empty"
+    
     - name: Verify files after training and visualizations
       run: |
         echo "Contents of data/ after training:"
         ls -la data/ || echo "Data directory not found"
-        find data/ -type f | head -10 || echo "No files found"
-        
+        echo "Files in data/ (first 10):"
+        find data/ -type f | head -10 || echo "No files found in data/"
+    
     - name: Update README with visualizations
       run: |
-        # Добавляет секцию с визуализациями в конец README.md
+        # Добавляет секцию с визуализациями в конец README.md (даже если файлов нет, секция добавится)
         echo "" >> README.md
         echo "## Визуализации" >> README.md
         echo "![Comfort Index](data/visualizations/comfort_index.png)" >> README.md
-        echo "![Temperature](data/visualizations/temperature.png)" >> README.md  # Добавь больше, если нужно
+        echo "![Temperature](data/visualizations/temperature.png)" >> README.md
+        # Добавьте больше строк, если нужно (например, для других графиков)
     
     - name: Add, commit, and push changes
       run: |
         git config --local user.email "action@github.com"
         git config --local user.name "GitHub Action"
-        git add data/models/ data/visualizations/ README.md  # Добавляет прогнозы, визуализации и README
+        git add .  # Добавляет все изменения (модели, визуализации, README и т.д.)
         git status  # Покажет, что добавлено
-        run: |
-          if [ -d "data/visualizations" ] && [ "$(ls -A data/visualizations)" ]; then
-          git add data/visualizations/
-          git commit -m "Add generated visualizations"
-          git push https://${{ github.actor }}:${{ secrets.PAT }}@github.com/${{ github.repository }}.git ${{ github.ref_name}}
+        if ! git diff --staged --quiet; then
+          git commit -m "Update forecasts, visualizations, and README"
+          git push https://${{ github.actor }}:${{ secrets.PAT }}@github.com/${{ github.repository }}.git ${{ github.ref_name }}
+          echo "Changes committed and pushed."
         else
-          echo "No files to commit in data/visualizations/"
+          echo "No changes to commit."
         fi
-        
+    
     - name: Verify push
-      run: echo "Push completed. Check repo for changes."
+      run: echo "Workflow completed. Check repository for changes."
