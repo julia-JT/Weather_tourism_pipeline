@@ -4,4 +4,5 @@ pandas
 numpy
 matplotlib
 prophet
+sklearn
 # Добавьте другие, если знаете (например, из ошибок импорта в коде)
