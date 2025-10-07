@@ -26,10 +26,16 @@ def load_historical_data():
         file_path = os.path.join(enriched_dir, file)
         try:
             df = pd.read_csv(file_path, encoding='utf-8')
-            city_name = file.split('_')[0]
-            df['city'] = city_name
+            # Используем столбец 'city_name' вместо имени файла
+            df['city'] = df.get('city_name', 'Unknown')  # Если столбца нет, 'Unknown'
+            # Преобразуем дату
             if 'collection_time' in df.columns:
-                df['as_of_date'] = pd.to_datetime(df['collection_time'])
+                df['as_of_date'] = pd.to_datetime(df['collection_time'], errors='coerce')
+            elif 'date' in df.columns:  # Альтернатива, если столбец называется 'date'
+                df['as_of_date'] = pd.to_datetime(df['date'], errors='coerce')
+            else:
+                print(f"WARNING: Нет столбца даты в {file_path}. Пропускаем.")
+                continue
             df_list.append(df)
         except Exception as e:
             print(f"Ошибка при загрузке {file_path}: {e}")
@@ -51,9 +57,9 @@ def load_forecast():
         df = pd.read_csv(forecast_file, encoding='utf-8')
         # Преобразуем as_of_date и forecast_date в datetime
         if 'as_of_date' in df.columns:
-            df['as_of_date'] = pd.to_datetime(df['as_of_date'])
+            df['as_of_date'] = pd.to_datetime(df['as_of_date'], errors='coerce')
         if 'forecast_date' in df.columns:
-            df['forecast_date'] = pd.to_datetime(df['forecast_date'])
+            df['forecast_date'] = pd.to_datetime(df['forecast_date'], errors='coerce')
         return df
     except Exception as e:
         print(f"Ошибка при загрузке {forecast_file}: {e}")
@@ -81,7 +87,7 @@ def generate_plots():
     
     # Рассчитаем ошибки прогноза: для каждого прогноза найти реальную температуру на forecast_date
     forecast_errors = []
-    if not df_forecast.empty and 'forecast_date' in df_forecast.columns and 'predicted_temp' in df_forecast.columns:
+    if not df_forecast.empty and 'forecast_date' in df_forecast.columns and 'predicted_temp' in df_forecast.columns and 'city' in df_forecast.columns:
         for _, forecast_row in df_forecast.iterrows():
             city = forecast_row['city']
             forecast_date = forecast_row['forecast_date'].date()
@@ -102,11 +108,23 @@ def generate_plots():
     
     df_errors = pd.DataFrame(forecast_errors)
     
-    # График 1: Comfort Index с прогнозами температуры по городам (добавляем реальные точки)
-    plt.figure(figsize=(12, 6))
+    # График 1: Comfort Index и прогноз температуры по городам (разделены на подграфики)
+    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 10), sharex=True)
+    
+    # Подграфик 1: Comfort Index
     for city in daily_comfort['city'].unique():
         city_data = daily_comfort[daily_comfort['city'] == city]
-        plt.plot(city_data['date'], city_data['comfort_index'], label=f'Исторический comfort_index ({city})')
+        ax1.plot(city_data['date'], city_data['comfort_index'], label=f'Comfort Index ({city})')
+    
+    ax1.set_ylabel('Comfort Index')
+    ax1.set_title('Comfort Index по городам')
+    ax1.legend()
+    ax1.grid(True)
+    
+    # Подграфик 2: Температура с прогнозами
+    for city in daily_temp['city'].unique():
+        city_data = daily_temp[daily_temp['city'] == city]
+        ax2.plot(city_data['date'], city_data['temperature'], label=f'Историческая температура ({city})')
         
         # Добавить прогноз температуры для этого города
         if not df_forecast.empty and 'forecast_date' in df_forecast.columns and 'predicted_temp' in df_forecast.columns:
@@ -114,27 +132,27 @@ def generate_plots():
             if not city_forecast.empty:
                 forecast_date = city_forecast['forecast_date'].iloc[0].date()
                 forecast_temp = city_forecast['predicted_temp'].iloc[0]
-                plt.scatter(forecast_date, forecast_temp, label=f'Прогноз temp ({city})', s=100, marker='o', color='red')
+                ax2.scatter(forecast_date, forecast_temp, label=f'Прогноз ({city})', s=100, marker='o', color='red')
                 
                 # Добавить реальную температуру на forecast_date, если есть
                 real_temp_row = daily_temp[(daily_temp['city'] == city) & (daily_temp['date'] == forecast_date)]
                 if not real_temp_row.empty:
                     real_temp = real_temp_row['temperature'].iloc[0]
-                    plt.scatter(forecast_date, real_temp, label=f'Реальная temp ({city})', s=100, marker='x', color='blue')
+                    ax2.scatter(forecast_date, real_temp, label=f'Реальная ({city})', s=100, marker='x', color='blue')
     
-    plt.xlabel('Дата')
-    plt.ylabel('Comfort Index / Температура (°C)')
-    plt.title('Comfort Index и прогноз температуры по городам с реальными данными')
-    plt.legend()
-    plt.grid(True)
+    ax2.set_xlabel('Дата')
+    ax2.set_ylabel('Температура (°C)')
+    ax2.set_title('Температура по городам с прогнозами и реальными данными')
+    ax2.legend()
+    ax2.grid(True)
     plt.xticks(rotation=45)
     plt.tight_layout()
-    plot_path = os.path.join(visualizations_dir, 'comfort_index_by_city.png')
+    plot_path = os.path.join(visualizations_dir, 'comfort_index_and_temp_by_city.png')
     plt.savefig(plot_path)
     plt.close()
-    print(f"График comfort index сохранён в {plot_path}")
+    print(f"График comfort index и температуры сохранён в {plot_path}")
     
-    # График 2: Температура с прогнозами по городам (добавляем реальные точки)
+    # График 2: Температура с прогнозами по городам (оставлен как есть, но с проверками)
     plt.figure(figsize=(12, 6))
     for city in daily_temp['city'].unique():
         city_data = daily_temp[daily_temp['city'] == city]
@@ -186,7 +204,7 @@ def generate_plots():
         plt.close()
         print(f"График ошибок прогноза сохранён в {error_plot_path}")
     else:
-        print("Нет данных для графика ошибок прогноза (возможно, нет совпадений дат).")
+        print("Нет данных для графика ошибок прогноза (возможно, нет совпадений дат или прогнозов).")
 
 # Запуск
 if __name__ == "__main__":
