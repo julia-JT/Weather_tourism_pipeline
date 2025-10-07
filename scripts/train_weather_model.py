@@ -5,6 +5,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_absolute_error
 import pickle
+import subprocess  # Для вызова generate_visualizations.py
 
 # Папки
 enriched_dir = os.path.join(os.path.dirname(__file__), '..', 'data', 'enriched')
@@ -104,12 +105,19 @@ def train_and_forecast():
     forecast_df = pd.DataFrame({
         'forecast_date': [tomorrow],
         'predicted_comfort_index': [forecast_comfort_index],
-        'based_on_date': [df['as_of_date'].max().strftime('%Y-%m-%d %H:%M:%S')]  # Изменено на YYYY-MM-DD hh:mm:ss
+        'based_on_date': [df['as_of_date'].max().strftime('%Y-%m-%d %H:%M:%S')]
     })
     forecast_path = os.path.join(forecasts_dir, 'forecast_tomorrow.csv')
     forecast_df.to_csv(forecast_path, index=False, encoding='utf-8')
     print(f"Прогноз на завтра ({tomorrow}): comfort_index = {forecast_comfort_index:.2f}")
     print(f"Прогноз сохранён в {forecast_path}")
+    
+    # Шаг 7: Генерировать визуализации (вызов отдельного скрипта)
+    try:
+        subprocess.run(['python', os.path.join(os.path.dirname(__file__), 'generate_visualizations.py')], check=True)
+        print("Визуализации сгенерированы.")
+    except subprocess.CalledProcessError as e:
+        print(f"Ошибка при генерации визуализаций: {e}")
 
 # Запуск
 if __name__ == "__main__":
