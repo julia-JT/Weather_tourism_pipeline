@@ -55,20 +55,8 @@ def create_reports():
     # Добавить as_of_date в витрину
     df_city_rating['as_of_date'] = datetime.now().strftime('%Y-%m-%d %H:%M')
     
-    # Дополнение: Если файл существует, читаем, объединяем, группируем для усреднения/суммирования
+    # Перезапись витрины (без аккумуляции истории)
     city_rating_path = os.path.join(reports_dir, "city_tourism_rating.csv")
-    if os.path.exists(city_rating_path):
-        existing_df = pd.read_csv(city_rating_path, encoding='utf-8')
-        combined_df = pd.concat([existing_df, df_city_rating], ignore_index=True)
-        df_city_rating = combined_df.groupby('city_name').agg({
-            'avg_comfort_index': 'mean',
-            'recommended_activity': lambda x: x.mode()[0] if not x.mode().empty else 'неизвестно',
-            'tourist_season_match': lambda x: x.mode()[0] if not x.mode().empty else 'неизвестно',
-            'tourism_season': lambda x: x.mode()[0] if not x.mode().empty else 'неизвестно',
-            'tour_recommendation': lambda x: x.mode()[0] if not x.mode().empty else x.iloc[0],
-            'as_of_date': 'max'
-        }).reset_index()
-        df_city_rating = df_city_rating.sort_values('avg_comfort_index')
     df_city_rating.to_csv(city_rating_path, index=False, encoding='utf-8')
     
     # Витрина 2: Сводка по федеральным округам
@@ -99,17 +87,8 @@ def create_reports():
     # Добавить as_of_date в витрину
     df_district_summary['as_of_date'] = datetime.now().strftime('%Y-%m-%d %H:%M')
     
-    # Дополнение: Если файл существует, читаем, объединяем, группируем для усреднения температуры и суммирования городов
+    # Перезапись витрины (без аккумуляции истории)
     district_summary_path = os.path.join(reports_dir, "federal_districts_summary.csv")
-    if os.path.exists(district_summary_path):
-        existing_df = pd.read_csv(district_summary_path, encoding='utf-8')
-        combined_df = pd.concat([existing_df, df_district_summary], ignore_index=True)
-        df_district_summary = combined_df.groupby('federal_district').agg({
-            'avg_temperature': 'mean',
-            'comfortable_cities_count': 'sum',
-            'general_recommendation': lambda x: x.mode()[0] if not x.mode().empty else x.iloc[0],
-            'as_of_date': 'max'
-        }).reset_index()
     df_district_summary.to_csv(district_summary_path, index=False, encoding='utf-8')
     
     # Витрина 3: Отчет для турагентств (travel_recommendations.csv)
@@ -155,11 +134,8 @@ def create_reports():
     # Добавить as_of_date в витрину
     df_mart3['as_of_date'] = datetime.now().strftime('%Y-%m-%d %H:%M')
     
-    # Дополнение
+    # Перезапись витрины (без аккумуляции истории)
     travel_rec_path = os.path.join(reports_dir, "travel_recommendations.csv")
-    if os.path.exists(travel_rec_path):
-        existing_df = pd.read_csv(travel_rec_path, encoding='utf-8')
-        df_mart3 = pd.concat([existing_df, df_mart3], ignore_index=True)
     df_mart3.to_csv(travel_rec_path, index=False, encoding='utf-8')
     
     # Лог
