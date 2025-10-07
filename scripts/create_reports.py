@@ -67,15 +67,19 @@ def create_reports():
     df_city_agg = df_all.groupby('city_name').agg({
         'federal_district': 'first',
         'comfort_index': 'mean',
-        'temperature': 'mean'
+        'temperature': 'mean',
+        'recommended_activity': lambda x: x.mode()[0] if not x.mode().empty else 'неизвестно'
     }).reset_index()
     df_city_agg['avg_comfort_index'] = df_city_agg['comfort_index'].round(2)
     df_city_agg['avg_temperature'] = df_city_agg['temperature'].round(2)
     
+    # Фильтруем города, подходящие для туризма: comfort_index > 15 и recommended_activity != "домашний отдых"
+    df_city_agg_filtered = df_city_agg[(df_city_agg['avg_comfort_index'] > 15) & (df_city_agg['recommended_activity'] != 'домашний отдых')]
+    
     # Теперь группируем по district
-    df_district_summary = df_city_agg.groupby('federal_district').agg({
+    df_district_summary = df_city_agg_filtered.groupby('federal_district').agg({
         'avg_temperature': 'mean',
-        'avg_comfort_index': lambda x: (x > 15).sum()  # Количество комфортных городов (avg_comfort > 15, адаптируйте порог)
+        'avg_comfort_index': 'count'  # Теперь это count комфортных и подходящих для туризма городов
     }).reset_index()
     df_district_summary['avg_temperature'] = df_district_summary['avg_temperature'].round(2)
     df_district_summary['comfortable_cities_count'] = df_district_summary['avg_comfort_index']
@@ -150,7 +154,7 @@ def create_reports():
         log_file.write(f"Всего строк данных: {len(df_all)}\n")
         log_file.write(f"Дата загрузки: {datetime.now().strftime('%Y-%m-%d %H:%M')}\n")
         log_file.write("Витрина 1: Рейтинг городов (city_tourism_rating.csv) - сортировка по avg_comfort_index\n")
-        log_file.write("Витрина 2: Сводка по округам (federal_districts_summary.csv) - средняя temp, комфортные города\n")
+        log_file.write("Витрина 2: Сводка по округам (federal_districts_summary.csv) - средняя temp, комфортные города (comfort > 15 и не домашний отдых)\n")
         log_file.write("Витрина 3: Рекомендации (travel_recommendations.csv) - топ-3, дома, дополнительные заметки\n")
     
     print(f"Отчеты созданы в {reports_dir} на основе всех данных за период")
