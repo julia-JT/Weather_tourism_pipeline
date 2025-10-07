@@ -112,7 +112,7 @@ def create_reports():
     stay_home_cities = df_city_agg2[df_city_agg2['recommended_activity'] == "домашний отдых"][['city_name', 'comfort_index']]
     stay_home_cities['comfort_index'] = stay_home_cities['comfort_index'].round(2)
     
-    # Объединяем special_recommendations и weather_warnings в additional_notes
+    # Объединяем special_recommendations и weather_warnings в additional_notes с маской <Город>: <рекомендация>
     df_city_agg2['additional_notes'] = df_city_agg2.apply(
         lambda row: (
             ("Взять зонт" if row['pop'] > 0.5 else "") +
@@ -123,7 +123,8 @@ def create_reports():
             ("; Плохая видимость из-за тумана/облачности" if row['clouds'] > 80 or row['humidity'] > 90 else "")
         ).strip("; "), axis=1
     )
-    additional_notes_str = '; '.join(df_city_agg2[df_city_agg2['additional_notes'] != '']['additional_notes'].unique())  # Уникальные
+    # Теперь формируем строку с городом: <Город>: <рекомендация>; <Город>: <рекомендация>...
+    additional_notes_str = '; '.join([f"{row['city_name']}: {row['additional_notes']}" for _, row in df_city_agg2[df_city_agg2['additional_notes'] != ''].iterrows()])
     
     # Создать сводный DataFrame для витрины
     mart3_data = {
