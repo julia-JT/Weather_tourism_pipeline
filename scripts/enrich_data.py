@@ -1,6 +1,7 @@
 import pandas as pd
 import os
 from datetime import datetime
+from collections import defaultdict
 
 # Папки (предполагаем, что cleaned_data находится в data/cleaned/, а enriched в data/enriched/)
 cleaned_dir = os.path.join(os.path.dirname(__file__), '..', 'data', 'cleaned')
@@ -55,67 +56,80 @@ def determine_season_match(current_month, tourism_season):
         return "да"
     return "нет"
 
-def enrich_weather_data(file_path):
-    try:
-        df = pd.read_csv(file_path, encoding='utf-8')
-    except Exception as e:
-        print(f"ERROR: Ошибка чтения {file_path}: {e}")
+def enrich_weather_data_for_date(date_str, file_paths):
+    all_data = []
+    for file_path in file_paths:
+        try:
+            df = pd.read_csv(file_path, encoding='utf-8')
+            if not df.empty:
+                all_data.append(df)
+            else:
+                print(f"WARNING: Файл {file_path} пустой, пропускаем")
+        except Exception as e:
+            print(f"ERROR: Ошибка чтения {file_path}: {e}, пропускаем")
+    
+    if not all_data:
+        print(f"WARNING: Нет данных для даты {date_str}")
         return
     
-    if df.empty:
-        print(f"WARNING: Файл {file_path} пустой")
-        return
+    # Объединяем все файлы за дату
+    combined_df = pd.concat(all_data, ignore_index=True)
     
-    # Проверяем наличие необходимых столбцов (убрал federal_district из проверки, добавлю его ниже)
+    # Удаляем дубликаты, если есть (на случай повторяющихся строк)
+    combined_df = combined_df.drop_duplicates()
+    
+    # Проверяем наличие необходимых столбцов
     required_cols = ['city_name', 'temperature', 'humidity', 'clouds', 'pop', 'wind_speed']
-    if not all(col in df.columns for col in required_cols):
-        print(f"ERROR: Недостающие столбцы в {file_path}: {required_cols}")
+    if not all(col in combined_df.columns for col in required_cols):
+        print(f"ERROR: Недостающие столбцы для даты {date_str}: {required_cols}")
         return
     
     # Заменяем пустые строки на NaN для корректной обработки
-    df = df.replace('', pd.NA)
+    combined_df = combined_df.replace('', pd.NA)
     
     # Добавляем federal_district на основе city_name
-    df['federal_district'] = df['city_name'].map(federal_districts).fillna('Неизвестный федеральный округ')
+    combined_df['federal_district'] = combined_df['city_name'].map(federal_districts).fillna('Неизвестный федеральный округ')
     
     # Рассчитываем comfort_index
-    df['comfort_index'] = df.apply(calculate_comfort_index, axis=1)
+    combined_df['comfort_index'] = combined_df.apply(calculate_comfort_index, axis=1)
     
     # Определяем recommended_activity
-    df['recommended_activity'] = df.apply(lambda row: determine_recommended_activity(row['comfort_index'], row['pop']), axis=1)
+    combined_df['recommended_activity'] = combined_df.apply(lambda row: determine_recommended_activity(row['comfort_index'], row['pop']), axis=1)
     
     # Добавляем tourism_season (статический, адаптируйте под реальные данные)
-    df['tourism_season'] = "май-август"  # Пример: сезон для большинства городов
+    combined_df['tourism_season'] = "май-август"  # Пример: сезон для большинства городов
     
     # Определяем tourist_season_match (на основе текущего месяца)
     current_month = datetime.now().month  # Текущий месяц (1-12)
-    df['tourist_season_match'] = df.apply(lambda row: determine_season_match(current_month, row['tourism_season']), axis=1)
+    combined_df['tourist_season_match'] = combined_df.apply(lambda row: determine_season_match(current_month, row['tourism_season']), axis=1)
     
-    # Формируем имя файла: извлекаем YYYYMMDD из cleaned файла и добавляем HHMM
-    basename = os.path.basename(file_path)  # Например, "weather_cleaned_20231001.csv"
-    if basename.startswith("weather_cleaned_") and basename.endswith(".csv"):
-        date_part = basename[len("weather_cleaned_"):-len(".csv")]  # Извлекаем "20231001"
-        current_time = datetime.now().strftime("%H%M")  # Текущее время, например "1430"
-        enriched_file = f"weather_enriched_{date_part}_{current_time}.csv"
-    else:
-        # Fallback, если формат не совпадает
-        enriched_file = f"weather_enriched_{datetime.now().strftime('%Y%m%d_%H%M')}.csv"
-    
+    # Формируем имя файла: weather_enriched_YYYYMMDD.csv (без времени)
+    enriched_file = f"weather_enriched_{date_str}.csv"
     enriched_path = os.path.join(enriched_dir, enriched_file)
     
     # Сохраняем enriched файл
     try:
-        df.to_csv(enriched_path, index=False, encoding='utf-8')
-        print(f"SUCCESS: Enriched data saved to {enriched_path}")
+        combined_df.to_csv(enriched_path, index=False, encoding='utf-8')
+        print(f"SUCCESS: Enriched data for date {date_str} saved to {enriched_path} (объединено {len(file_paths)} файлов)")
     except Exception as e:
         print(f"ERROR: Ошибка сохранения в {enriched_path}: {e}")
 
-# Основная логика: обрабатываем все файлы в cleaned_dir
+# Основная логика: группируем файлы по дате и обрабатываем
 if __name__ == "__main__":
     if os.path.exists(cleaned_dir):
+        # Группируем файлы по дате
+        date_to_files = defaultdict(list)
         for file in os.listdir(cleaned_dir):
             if file.startswith("weather_cleaned_") and file.endswith(".csv"):
-                file_path = os.path.join(cleaned_dir, file)
-                enrich_weather_data(file_path)
+                # Извлекаем YYYYMMDD
+                date_part = file[len("weather_cleaned_"):-len(".csv")]
+                if len(date_part) == 8 and date_part.isdigit():  # Проверяем формат YYYYMMDD
+                    date_to_files[date_part].append(os.path.join(cleaned_dir, file))
+                else:
+                    print(f"WARNING: Неверный формат даты в файле {file}, пропускаем")
+        
+        # Обрабатываем каждую дату
+        for date_str, file_paths in date_to_files.items():
+            enrich_weather_data_for_date(date_str, file_paths)
     else:
         print(f"ERROR: Папка {cleaned_dir} не существует")
