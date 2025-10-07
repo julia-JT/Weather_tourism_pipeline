@@ -35,7 +35,19 @@ jobs:
       run: |
         mkdir -p data/raw/openweather_api data/models data/models/forecast data/visualizations || echo "Failed to create directories"
         
+    # Проверка API-ключа перед сбором данных
+    - name: Check if API key is available
+      id: check_api
+      run: |
+        if [ -n "$OPENWEATHER_API_KEY" ]; then
+          echo "has_api_key=true" >> $GITHUB_OUTPUT
+        else
+          echo "has_api_key=false" >> $GITHUB_OUTPUT
+          echo "API key not available. Skipping data collection."
+        fi
+        
     - name: Run data collection
+      if: steps.check_api.outputs.has_api_key == 'true'
       run: |
         python scripts/collect_data.py || echo "Data collection script failed"
         
@@ -53,7 +65,19 @@ jobs:
         path: data/
         if-no-files-found: warn
 
+    # Проверка наличия сырых файлов перед очисткой
+    - name: Check if raw files exist for cleaning
+      id: check_raw
+      run: |
+        if find data/ -type f -name "*.json" | grep -q .; then
+          echo "has_raw_files=true" >> $GITHUB_OUTPUT
+        else
+          echo "has_raw_files=false" >> $GITHUB_OUTPUT
+          echo "No raw files found. Skipping data cleaning."
+        fi
+        
     - name: Run data cleaning
+      if: steps.check_raw.outputs.has_raw_files == 'true'
       run: |
         python scripts/clean_data.py || echo "Data cleaning script failed"
         
@@ -71,7 +95,19 @@ jobs:
         path: data/
         if-no-files-found: warn
 
+    # Проверка наличия файлов после очистки перед обогащением
+    - name: Check if cleaned files exist for enrichment
+      id: check_cleaned
+      run: |
+        if find data/ -type f | grep -q .; then
+          echo "has_cleaned_files=true" >> $GITHUB_OUTPUT
+        else
+          echo "has_cleaned_files=false" >> $GITHUB_OUTPUT
+          echo "No cleaned files found. Skipping data enrichment."
+        fi
+        
     - name: Run data enrichment
+      if: steps.check_cleaned.outputs.has_cleaned_files == 'true'
       run: |
         python scripts/enrich_data.py || echo "Data enrichment script failed"
         
@@ -89,7 +125,19 @@ jobs:
         path: data/
         if-no-files-found: warn
 
+    # Проверка наличия файлов после обогащения перед созданием отчётов
+    - name: Check if enriched files exist for reports
+      id: check_enriched
+      run: |
+        if find data/ -type f | grep -q .; then
+          echo "has_enriched_files=true" >> $GITHUB_OUTPUT
+        else
+          echo "has_enriched_files=false" >> $GITHUB_OUTPUT
+          echo "No enriched files found. Skipping report creation."
+        fi
+        
     - name: Run report creation
+      if: steps.check_enriched.outputs.has_enriched_files == 'true'
       run: |
         python scripts/create_reports.py || echo "Report creation script failed"
         
@@ -115,7 +163,19 @@ jobs:
         path: .  # Или укажите конкретный файл логов, если скрипты пишут в него
         if-no-files-found: warn
     
+    # Проверка наличия файлов после отчётов перед обучением
+    - name: Check if files exist for training
+      id: check_for_train
+      run: |
+        if find data/ -type f | grep -q .; then
+          echo "has_files_for_train=true" >> $GITHUB_OUTPUT
+        else
+          echo "has_files_for_train=false" >> $GITHUB_OUTPUT
+          echo "No files found after reports. Skipping training."
+        fi
+        
     - name: Train weather model and generate forecasts
+      if: steps.check_for_train.outputs.has_files_for_train == 'true'
       run: |
         python scripts/train_weather_model.py  # Исправлено: скрипт в scripts/, запускает обучение, прогноз и визуализации
     
