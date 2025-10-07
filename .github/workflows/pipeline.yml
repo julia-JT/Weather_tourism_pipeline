@@ -18,23 +18,24 @@ jobs:
       with:
         submodules: false
         token: ${{ secrets.REPO_ACCESS_TOKEN }}  # Используем PAT для push прав
-      
+        fetch-depth: 0  # Полная история для корректного merge/pull
+
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
         python-version: '3.9'  # Или ваша версия, Prophet требует 3.7+
-    
+
     - name: Install dependencies
       run: |
         pip install --upgrade pip
         pip install -r requirements.txt  # Если есть requirements.txt
         # Или напрямую: pip install prophet
-        pip install -r requirements.txt  # Добавлены зависимости для модели и визуализаций
-        
+        # pip install -r requirements.txt  # Удалено дублирование
+
     - name: Create data directories
       run: |
         mkdir -p data/raw/openweather_api data/models data/models/forecast data/visualizations || echo "Failed to create directories"
-        
+
     # Проверка API-ключа перед сбором данных
     - name: Check if API key is available
       id: check_api
@@ -45,18 +46,18 @@ jobs:
           echo "has_api_key=false" >> $GITHUB_OUTPUT
           echo "API key not available. Skipping data collection."
         fi
-        
+
     - name: Run data collection
       if: steps.check_api.outputs.has_api_key == 'true'
       run: |
         python scripts/collect_data.py || echo "Data collection script failed"
-        
+
     - name: Verify files after collection
       run: |
         echo "Contents of data/ after collection:"
         ls -la data/ || echo "Data directory not found"
         find data/ -type f -name "*.json" | head -10 || echo "No JSON files found"
-        
+
     - name: Upload data files as artifact after collection
       if: always()
       uses: actions/upload-artifact@v4
@@ -75,18 +76,18 @@ jobs:
           echo "has_raw_files=false" >> $GITHUB_OUTPUT
           echo "No raw files found. Skipping data cleaning."
         fi
-        
+
     - name: Run data cleaning
       if: steps.check_raw.outputs.has_raw_files == 'true'
       run: |
         python scripts/clean_data.py || echo "Data cleaning script failed"
-        
+
     - name: Verify files after cleaning
       run: |
         echo "Contents of data/ after cleaning:"
         ls -la data/ || echo "Data directory not found"
         find data/ -type f | head -10 || echo "No files found"
-        
+
     - name: Upload data files as artifact after cleaning
       if: always()
       uses: actions/upload-artifact@v4
@@ -105,18 +106,18 @@ jobs:
           echo "has_cleaned_files=false" >> $GITHUB_OUTPUT
           echo "No cleaned files found. Skipping data enrichment."
         fi
-        
+
     - name: Run data enrichment
       if: steps.check_cleaned.outputs.has_cleaned_files == 'true'
       run: |
         python scripts/enrich_data.py || echo "Data enrichment script failed"
-        
+
     - name: Verify files after enrichment
       run: |
         echo "Contents of data/ after enrichment:"
         ls -la data/ || echo "Data directory not found"
         find data/ -type f | head -10 || echo "No files found"
-        
+
     - name: Upload data files as artifact after enrichment
       if: always()
       uses: actions/upload-artifact@v4
@@ -135,18 +136,18 @@ jobs:
           echo "has_enriched_files=false" >> $GITHUB_OUTPUT
           echo "No enriched files found. Skipping report creation."
         fi
-        
+
     - name: Run report creation
       if: steps.check_enriched.outputs.has_enriched_files == 'true'
       run: |
         python scripts/create_reports.py || echo "Report creation script failed"
-        
+
     - name: Verify files after reports
       run: |
         echo "Contents of data/ after reports:"
         ls -la data/ || echo "Data directory not found"
         find data/ -type f | head -10 || echo "No files found"
-        
+
     - name: Upload data files as artifact after reports
       if: always()
       uses: actions/upload-artifact@v4
@@ -162,7 +163,7 @@ jobs:
         name: workflow-logs
         path: .  # Или укажите конкретный файл логов, если скрипты пишут в него
         if-no-files-found: warn
-    
+
     # Проверка наличия файлов после отчётов перед обучением
     - name: Check if files exist for training
       id: check_for_train
@@ -173,12 +174,12 @@ jobs:
           echo "has_files_for_train=false" >> $GITHUB_OUTPUT
           echo "No files found after reports. Skipping training."
         fi
-        
+
     - name: Train weather model and generate forecasts
       if: steps.check_for_train.outputs.has_files_for_train == 'true'
       run: |
         python scripts/train_weather_model.py  # Исправлено: скрипт в scripts/, запускает обучение, прогноз и визуализации
-    
+
     - name: Check directories
       run: |
         echo "Checking data/ directory:"
@@ -189,14 +190,14 @@ jobs:
         ls -la data/models/forecast/ || echo "data/models/forecast/ directory does not exist or is empty"
         echo "Checking data/visualizations/ directory:"
         ls -la data/visualizations/ || echo "data/visualizations/ directory does not exist or is empty"
-    
+
     - name: Verify files after training and visualizations
       run: |
         echo "Contents of data/ after training:"
         ls -la data/ || echo "Data directory not found"
         echo "Files in data/ (first 10):"
         find data/ -type f | head -10 || echo "No files found in data/"
-    
+
     - name: Update README with visualizations
       run: |
         # Добавляет секцию с визуализациями в конец README.md (даже если файлов нет, секция добавится)
@@ -205,20 +206,25 @@ jobs:
         echo "![Comfort Index](data/visualizations/comfort_index.png)" >> README.md
         echo "![Temperature](data/visualizations/temperature.png)" >> README.md
         # Добавьте больше строк, если нужно (например, для других графиков)
-    
+
     - name: Add, commit, and push changes
       run: |
         git config --local user.email "action@github.com"
         git config --local user.name "GitHub Action"
+        
+        # Синхронизировать с удалённым репозиторием перед пушем (чтобы избежать ошибки "remote contains work you do not have locally")
+        git pull origin ${{ github.ref_name }} --no-edit --allow-unrelated-histories || echo "Pull failed, proceeding with push (check for conflicts manually)"
+        
         git add .  # Добавляет все изменения (модели, визуализации, README и т.д.)
         git status  # Покажет, что добавлено
         if ! git diff --staged --quiet; then
           git commit -m "Update forecasts, visualizations, and README"
-          git push https://${{ github.actor }}:${{ secrets.PAT }}@github.com/${{ github.repository }}.git ${{ github.ref_name }}
+          # Используем --force-with-lease для безопасного push (не перезапишет, если remote изменился после pull)
+          git push https://${{ github.actor }}:${{ secrets.PAT }}@github.com/${{ github.repository }}.git ${{ github.ref_name }} --force-with-lease
           echo "Changes committed and pushed."
         else
           echo "No changes to commit."
         fi
-    
+
     - name: Verify push
       run: echo "Workflow completed. Check repository for changes."
