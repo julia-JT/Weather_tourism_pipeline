@@ -1,5 +1,5 @@
 Обработан файл: weather_cleaned_20251007.csv
-Количество записей: 15
+Количество записей: 20
 Добавленные поля:
 - Из справочника: federal_district, timezone, population, tourism_season
 - Вычисляемые: current_season, comfort_index, recommended_activity, tourist_season_match
