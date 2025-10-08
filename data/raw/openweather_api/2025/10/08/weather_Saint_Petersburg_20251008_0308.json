@@ -1,0 +1,54 @@
+{
+    "coord": {
+        "lon": 30.2642,
+        "lat": 59.8944
+    },
+    "weather": [
+        {
+            "id": 741,
+            "main": "Fog",
+            "description": "плотный туман",
+            "icon": "50n"
+        },
+        {
+            "id": 701,
+            "main": "Mist",
+            "description": "туман",
+            "icon": "50n"
+        }
+    ],
+    "base": "stations",
+    "main": {
+        "temp": 8.36,
+        "feels_like": 8.36,
+        "temp_min": 5.08,
+        "temp_max": 8.36,
+        "pressure": 1019,
+        "humidity": 90,
+        "sea_level": 1019,
+        "grnd_level": 1019
+    },
+    "visibility": 4300,
+    "wind": {
+        "speed": 0,
+        "deg": 0
+    },
+    "clouds": {
+        "all": 90
+    },
+    "dt": 1759892927,
+    "sys": {
+        "type": 2,
+        "id": 2045711,
+        "country": "RU",
+        "sunrise": 1759897247,
+        "sunset": 1759936315
+    },
+    "timezone": 10800,
+    "id": 498817,
+    "name": "Санкт-Петербург",
+    "cod": 200,
+    "city": "Saint Petersburg",
+    "timestamp": "2025-10-08T03:08:47.123398",
+    "source": "openweathermap.org"
+}
