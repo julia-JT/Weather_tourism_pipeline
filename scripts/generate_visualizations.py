@@ -64,6 +64,38 @@ def load_forecast():
     except Exception as e:
         print(f"Ошибка при загрузке {forecast_file}: {e}")
         return pd.DataFrame()
+# Функция для генерации двойного графика динамики температуры
+def generate_temperature_trend_plot():
+    # Загрузить исторические данные (используем вашу функцию load_historical_data)
+    df_hist = load_historical_data()
+    if df_hist.empty:
+        print("Нет исторических данных для графика динамики температуры.")
+        return
+    
+    # Группировка по дате и городу
+    df_hist['date'] = df_hist['as_of_date'].dt.date
+    daily_temp = df_hist.groupby(['date', 'city'])['temperature'].mean().reset_index()
+    
+    # Создать двойной график: day и night (предполагаем, что данные имеют интервалы, но для простоты используем общую температуру; если нужно разделить, добавьте логику)
+    # Если у вас есть разделение на day/night, используйте pivot как в train_weather_model.py
+    plt.figure(figsize=(14, 8))
+    
+    for city in daily_temp['city'].unique():
+        city_data = daily_temp[daily_temp['city'] == city]
+        # Для простоты: одна линия на город (средняя температура). Если нужно day/night, добавьте субплоты или две линии.
+        plt.plot(city_data['date'], city_data['temperature'], label=f'{city} (средняя)')
+    
+    plt.xlabel('Дата')
+    plt.ylabel('Температура (°C)')
+    plt.title('Динамика температуры по городам за все время')
+    plt.legend()
+    plt.grid(True)
+    plt.xticks(rotation=45)
+    plt.tight_layout()
+    trend_plot_path = os.path.join(visualizations_dir, 'temperature_trend.png')
+    plt.savefig(trend_plot_path)
+    plt.close()
+    print(f"Двойной график динамики температуры сохранён в {trend_plot_path}")
 
 # Функция для генерации графиков
 def generate_plots():
@@ -105,7 +137,7 @@ def generate_plots():
                     'real_temp': real_temp,
                     'error': error
                 })
-    
+    generate_temperature_trend_plot() 
     df_errors = pd.DataFrame(forecast_errors)
     
     # График 1: Comfort Index и прогноз температуры по городам (разделены на подграфики)
