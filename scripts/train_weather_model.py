@@ -33,7 +33,7 @@ def load_data_from_directory(directory):
                 continue
             # Переименовываем 'collection_time' в 'date' (без проверок, предполагаем наличие)
             df.rename(columns={'collection_time': 'date'}, inplace=True)
-            df['date'] = pd.to_datetime(df['date'])
+            df['date'] = pd.to_datetime(df['date'], format='%d.%m.%Y %H:%M:%S', errors='coerce')
             all_data.append(df)
     if all_data:
         combined_df = pd.concat(all_data, ignore_index=True)
