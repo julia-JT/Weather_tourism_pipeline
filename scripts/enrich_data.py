@@ -1,6 +1,6 @@
 import pandas as pd
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 from collections import defaultdict
 
 # Папки (предполагаем, что cleaned_data находится в data/cleaned/, а enriched в data/enriched/)
@@ -157,8 +157,12 @@ def enrich_weather_data_for_date(date_str, file_paths):
     except Exception as e:
         print(f"ERROR: Ошибка сохранения в {enriched_path}: {e}")
 
-# Основная логика: группируем файлы по дате и обрабатываем
+# Основная логика: группируем файлы по дате и обрабатываем только за сегодня и вчера
 if __name__ == "__main__":
+    # Определяем даты сегодня и вчера
+    today = datetime.today().date()
+    yesterday = today - timedelta(days=1)
+    
     if os.path.exists(cleaned_dir):
         # Группируем файлы по дате
         date_to_files = defaultdict(list)
@@ -171,8 +175,12 @@ if __name__ == "__main__":
                 else:
                     print(f"WARNING: Неверный формат даты в файле {file}, пропускаем")
         
-        # Обрабатываем каждую дату
-        for date_str, file_paths in date_to_files.items():
-            enrich_weather_data_for_date(date_str, file_paths)
+        # Обрабатываем только даты за вчера и сегодня
+        for dt in [yesterday, today]:
+            date_str = dt.strftime("%Y%m%d")
+            if date_str in date_to_files:
+                enrich_weather_data_for_date(date_str, date_to_files[date_str])
+            else:
+                print(f"Нет cleaned файлов для даты {date_str}")
     else:
         print(f"ERROR: Папка {cleaned_dir} не существует")
