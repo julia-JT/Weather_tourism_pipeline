@@ -50,16 +50,38 @@ def load_forecast_data():
 def generate_markdown(data, forecast_df):
     md = "### Данные о погоде\n\n"
     
-    # Графики
+    # Графики из generate_visualizations.py
     md += "#### Графики\n"
-    md += "![Динамика температуры](data/visualizations/temperature_trend.png)\n\n"
+    if os.path.exists(os.path.join(visualizations_dir, 'comfort_index_trend.png')):
+        md += "![Динамика avg_comfort_index](data/visualizations/comfort_index_trend.png)\n\n"
+    if os.path.exists(os.path.join(visualizations_dir, 'district_histogram.png')):
+        md += "![Гистограмма по федеральным округам](data/visualizations/district_histogram.png)\n\n"
+    # Добавляем старый график, если он есть (из модели, но поскольку generate_visualizations.py не генерирует его, опционально)
+    if os.path.exists(os.path.join(visualizations_dir, 'temperature_trend.png')):
+        md += "![Динамика температуры](data/visualizations/temperature_trend.png)\n\n"
     
-    # Добавьте здесь генерацию таблиц из data и forecast_df
-    # Например:
+    # Таблицы из aggregated данных
     if 'city_tourism_rating' in data:
         md += "#### Рейтинг туризма по городам\n"
         md += data['city_tourism_rating'].to_markdown(index=False) + "\n\n"
-    # Аналогично для других DataFrame
+    if 'federal_districts_summary' in data:
+        md += "#### Сводка по федеральным округам\n"
+        md += data['federal_districts_summary'].to_markdown(index=False) + "\n\n"
+    if 'travel_recommendations' in data:
+        md += "#### Рекомендации для путешествий\n"
+        # Вывести значения в текстовой форме, как в generate_visualizations.py
+        latest_date = data['travel_recommendations']['as_of_date'].max() if not data['travel_recommendations'].empty else None
+        if latest_date:
+            row = data['travel_recommendations'].iloc[0] if not data['travel_recommendations'].empty else {}
+            md += f"Рекомендации на {latest_date.date()}: " + ", ".join([f"{col}: {row[col]}" for col in data['travel_recommendations'].columns if col != 'as_of_date']) + "\n\n"
+    
+    # Данные из модели (прогнозы)
+    if not forecast_df.empty:
+        md += "#### Прогнозы температуры\n"
+        md += forecast_df.to_markdown(index=False) + "\n\n"
+        # Добавляем графики ошибок, если они есть (предполагаем, что generate_visualizations.py может генерировать их, но в текущем коде нет; добавьте, если нужно)
+        if os.path.exists(os.path.join(visualizations_dir, 'forecast_errors.png')):
+            md += "![Ошибки прогноза](data/visualizations/forecast_errors.png)\n\n"
     
     return md
 
