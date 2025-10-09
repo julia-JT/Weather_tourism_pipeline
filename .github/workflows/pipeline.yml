@@ -52,8 +52,10 @@ jobs:
         pip install --upgrade pip
         pip install -r requirements.txt  # Если есть requirements.txt
         pip install tabulate  # Добавлено для исправления ошибки в update_readme.py
+        pip install tabulate
         # Или напрямую: pip install prophet
         # pip install -r requirements.txt  # Удалено дублирование
+        
     - name: Dependencies ready
       if: steps.install_deps.outcome == 'success'
       run: echo "ready=true" >> $GITHUB_OUTPUT
