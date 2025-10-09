@@ -1,7 +1,7 @@
 import json
 import os
 import pandas as pd
-from datetime import datetime
+from datetime import datetime, timedelta
 
 # Папки (относительные пути от scripts/ к data/)
 raw_dir = os.path.join(os.path.dirname(__file__), '..', 'data', 'raw', 'openweather_api')
@@ -81,9 +81,6 @@ def process_json_file(data):
 
 # Основная функция (чтение JSON, очистка, преобразование, обогащение и сохранение в CSV)
 def clean_weather_data():
-    all_records = []
-    total_original = 0
-    total_cleaned = 0
     problems = []
     rules = [
         "Стандартизация названия города на русский язык",
@@ -94,6 +91,14 @@ def clean_weather_data():
         "Обогащение новыми полями (visibility, clouds, temp_min, temp_max)"
     ]
     
+    # Определяем даты сегодня и вчера
+    today = datetime.today().date()
+    yesterday = today - timedelta(days=1)
+    
+    # Словарь для хранения записей по датам
+    records_by_date = {today: [], yesterday: []}
+    counts_original = {today: 0, yesterday: 0}
+    
     # Найти все JSON файлы (только чтение, без изменений)
     for root, dirs, files in os.walk(raw_dir):
         for file in files:
@@ -102,46 +107,59 @@ def clean_weather_data():
                 try:
                     with open(filepath, 'r', encoding='utf-8') as f:
                         data = json.load(f)
-                    total_original += 1  # Каждый JSON — одна запись (текущая погода)
+                    
+                    # Получаем дату из timestamp внутри JSON
+                    timestamp_str = data.get('timestamp')
+                    if not timestamp_str:
+                        problems.append(f"Файл {file} пропущен: отсутствует timestamp")
+                        continue
+                    dt_obj = datetime.fromisoformat(timestamp_str)
+                    file_date = dt_obj.date()
+                    
+                    # Фильтруем только сегодня и вчера
+                    if file_date not in records_by_date:
+                        continue
+                    
+                    counts_original[file_date] += 1  # Каждый JSON — одна запись (текущая погода)
                     records = process_json_file(data)
-                    all_records.extend(records)
+                    records_by_date[file_date].extend(records)
                 except Exception as e:
                     problems.append(f"Ошибка чтения файла {filepath}: {e}")
     
-    # Подсчет очищенных
-    total_cleaned = len(all_records)
-    
-    # Проблемы
-    if total_original > total_cleaned:
-        problems.append(f"Отфильтровано {total_original - total_cleaned} записей из-за температуры вне диапазона или ошибок")
-    
-    # Дата загрузки из первого файла (или текущая дата, если пусто)
-    if all_records:
-        date_str = datetime.fromisoformat(all_records[0]['timestamp']).strftime("%Y%m%d")
-    else:
-        date_str = datetime.now().strftime("%Y%m%d")
-    
-    # Сохранить CSV
-    df = pd.DataFrame(all_records)
-    csv_filename = f"weather_cleaned_{date_str}.csv"
-    csv_path = os.path.join(cleaned_dir, csv_filename)
-    df.to_csv(csv_path, index=False, encoding='utf-8')
-    
-    # Лог
-    log_filename = f"cleaning_log_{date_str}.txt"
-    log_path = os.path.join(log_dir, log_filename)
-    with open(log_path, 'w', encoding='utf-8') as log_file:
-        log_file.write(f"Количество исходных записей: {total_original}\n")
-        log_file.write(f"Количество очищенных записей: {total_cleaned}\n")
-        log_file.write("Типы примененных правил:\n")
-        for rule in rules:
-            log_file.write(f"- {rule}\n")
-        log_file.write("Найденные проблемы:\n")
-        for problem in problems:
-            log_file.write(f"- {problem}\n")
-    
-    print(f"Очищенные данные сохранены в {csv_path}")
-    print(f"Лог сохранен в {log_path}")
+    # Сохраняем по отдельности для каждой даты
+    for dt in [yesterday, today]:
+        day_records = records_by_date[dt]
+        total_cleaned = len(day_records)
+        total_original = counts_original[dt]
+        
+        if not day_records:
+            print(f"Нет данных для даты {dt.strftime('%Y-%m-%d')}")
+            continue
+        
+        # Формат даты для имени файла
+        date_str = dt.strftime("%Y%m%d")
+        
+        # Сохранить CSV
+        df = pd.DataFrame(day_records)
+        csv_filename = f"weather_cleaned_{date_str}.csv"
+        csv_path = os.path.join(cleaned_dir, csv_filename)
+        df.to_csv(csv_path, index=False, encoding='utf-8')
+        
+        # Лог
+        log_filename = f"cleaning_log_{date_str}.txt"
+        log_path = os.path.join(log_dir, log_filename)
+        with open(log_path, 'w', encoding='utf-8') as log_file:
+            log_file.write(f"Количество исходных записей: {total_original}\n")
+            log_file.write(f"Количество очищенных записей: {total_cleaned}\n")
+            log_file.write("Типы примененных правил:\n")
+            for rule in rules:
+                log_file.write(f"- {rule}\n")
+            log_file.write("Найденные проблемы:\n")
+            for problem in problems:
+                log_file.write(f"- {problem}\n")
+        
+        print(f"Очищенные данные за {dt.strftime('%Y-%m-%d')} сохранены в {csv_path}")
+        print(f"Лог сохранен в {log_path}")
 
 # Запуск
 if __name__ == "__main__":
