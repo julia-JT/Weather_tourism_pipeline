@@ -5,4 +5,5 @@ numpy
 matplotlib
 prophet
 scikit-learn
+tabulate
 # Добавьте другие, если знаете (например, из ошибок импорта в коде)
