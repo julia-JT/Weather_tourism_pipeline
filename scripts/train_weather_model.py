@@ -20,23 +20,19 @@ os.makedirs(visualizations_dir, exist_ok=True)
 def load_data_from_directory(directory):
     all_data = []
     for file in os.listdir(directory):
-        if file.endswith('.csv'):
+        # Фильтр: только файлы weather_enriched_YYYYMMDD.csv, игнорируем cities_references.csv
+        if file.startswith('weather_enriched_') and file.endswith('.csv'):
             file_path = os.path.join(directory, file)
             df = pd.read_csv(file_path)
-            # Извлекаем город из имени файла
-            city_name = file.split('_')[0]
-            df['city'] = city_name
-            # Переименовываем колонку даты в 'date' (если есть 'Date', 'date' или 'collection_time')
-            if 'Date' in df.columns:
-                df.rename(columns={'Date': 'date'}, inplace=True)
-            elif 'date' not in df.columns and 'collection_time' in df.columns:
-                # Используем collection_time как дату измерения
-                df.rename(columns={'collection_time': 'date'}, inplace=True)
-            if 'date' in df.columns:
-                df['date'] = pd.to_datetime(df['date'])
+            # Извлекаем город из поля 'city_name' (предполагаем, что оно всегда есть)
+            if 'city_name' in df.columns:
+                df['city'] = df['city_name']
             else:
-                print(f"Предупреждение: В файле {file} нет подходящей колонки даты ('date', 'Date' или 'collection_time'). Пропускаем файл.")
-                continue  # Пропускаем файл, если нет даты
+                print(f"Предупреждение: В файле {file} нет колонки 'city_name'. Пропускаем файл.")
+                continue
+            # Переименовываем 'collection_time' в 'date' (без проверок, предполагаем наличие)
+            df.rename(columns={'collection_time': 'date'}, inplace=True)
+            df['date'] = pd.to_datetime(df['date'])
             all_data.append(df)
     if all_data:
         combined_df = pd.concat(all_data, ignore_index=True)
@@ -51,7 +47,7 @@ def load_data_from_directory(directory):
         combined_df.rename(columns={'day': 'temp_day', 'night': 'temp_night'}, inplace=True)
         combined_df['date'] = pd.to_datetime(combined_df['date_day'])
         combined_df.drop('date_day', axis=1, inplace=True)
-        # Заполняем NaN (если интервал отсутствует) средними значениями или 0 (но лучше средними для точности)
+        # Заполняем NaN (если интервал отсутствует) средними значениями
         combined_df['temp_day'] = combined_df['temp_day'].fillna(combined_df['temp_day'].mean())
         combined_df['temp_night'] = combined_df['temp_night'].fillna(combined_df['temp_night'].mean())
         return combined_df
@@ -95,20 +91,24 @@ def train_and_forecast(df, city, tomorrow_date):
     y_night = df_city['temp_night']
     X_train_night, X_test_night, y_train_night, y_test_night = train_test_split(X, y_night, test_size=0.2, random_state=42)
     model_night = LinearRegression()
-    model_night.fit(X_train_night, y_train_night)
+    model_night.fit(X_train_night, y_night)
     
     # Прогноз на завтра
     tomorrow_day = pd.to_datetime(tomorrow_date).dayofyear
     predicted_day = model_day.predict([[tomorrow_day]])[0]
     predicted_night = model_night.predict([[tomorrow_day]])[0]
     
-    # Сохранение моделей
-    model_path_day = os.path.join(models_dir, f'{city}_model_day.pkl')
-    model_path_night = os.path.join(models_dir, f'{city}_model_night.pkl')
-    with open(model_path_day, 'wb') as f:
-        pickle.dump(model_day, f)
-    with open(model_path_night, 'wb') as f:
-        pickle.dump(model_night, f)
+    # Сохранение моделей (с try-except для отладки)
+    try:
+        model_path_day = os.path.join(models_dir, f'{city}_model_day.pkl')
+        model_path_night = os.path.join(models_dir, f'{city}_model_night.pkl')
+        with open(model_path_day, 'wb') as f:
+            pickle.dump(model_day, f)
+        with open(model_path_night, 'wb') as f:
+            pickle.dump(model_night, f)
+        print(f"Модели для {city} сохранены в {models_dir}")
+    except Exception as e:
+        print(f"Ошибка сохранения моделей для {city}: {e}")
     
     # Возврат прогноза как DataFrame
     forecast_df = pd.DataFrame({
@@ -154,22 +154,27 @@ def create_visualizations(df):
     plt.savefig(os.path.join(visualizations_dir, 'temperature_night.png'))
     plt.close()
     
-    # Визуализация comfort index (если есть humidity, но сейчас не актуально, так как фокус на temp_day/temp_night)
-    # Можно добавить, если есть humidity в агрегированных данных (но сейчас её нет)
     print("Визуализации сохранены в data/visualizations/")
 
 # Основная функция
 def main():
+    print(f"Script started. Data dir: {data_dir}")
+    print(f"Enriched dir: {enriched_dir}")
+    print(f"Files in enriched dir: {os.listdir(enriched_dir) if os.path.exists(enriched_dir) else 'Enriched dir not found'}")
+    
     df = load_data_from_directory(enriched_dir)
     if df.empty:
         print("Нет данных для обработки.")
         return
+    
+    print(f"Loaded data shape: {df.shape}")
     
     tomorrow = (datetime.now() + pd.Timedelta(days=1)).strftime('%Y-%m-%d')
     as_of_date = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     
     all_forecasts = []
     cities = df['city'].unique()
+    print(f"Cities to process: {cities}")
     for city in cities:
         forecast_df = train_and_forecast(df, city, tomorrow)
         if not forecast_df.empty:
@@ -179,9 +184,12 @@ def main():
     if all_forecasts:
         combined_forecast = pd.concat(all_forecasts, ignore_index=True)
         forecast_file = os.path.join(forecasts_dir, 'Forecast.csv')
-        file_exists = os.path.exists(forecast_file)
-        combined_forecast.to_csv(forecast_file, mode='a', header=not file_exists, index=False)
-        print(f"Прогнозы сохранены в {forecast_file} с as_of_date {as_of_date}")
+        try:
+            file_exists = os.path.exists(forecast_file)
+            combined_forecast.to_csv(forecast_file, mode='w', header=True, index=False)  # Перезапись файла
+            print(f"Прогнозы сохранены в {forecast_file} с as_of_date {as_of_date}")
+        except Exception as e:
+            print(f"Ошибка сохранения прогнозов: {e}")
     else:
         print("Нет прогнозов для сохранения.")
     
