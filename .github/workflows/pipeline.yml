@@ -25,6 +25,14 @@ jobs:
       with:
         python-version: '3.9'  # Или ваша версия, Prophet требует 3.7+
 
+    # Новый шаг: Pull с rebase в начале, чтобы синхронизировать локальную ветку с удалённой перед любыми изменениями.
+    # Это предотвратит ошибку non-fast-forward, если предыдущий run запушил изменения.
+    - name: Pull latest changes to avoid stale info
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git pull --rebase origin ${{ github.ref_name }} || (echo "Rebase failed, check for conflicts" && exit 1)
+
     - name: Install dependencies
       run: |
         pip install --upgrade pip
@@ -186,13 +194,6 @@ jobs:
       run: |
         python scripts/update_readme.py || echo "Failed to update README"
 
-    # Новый шаг: Pull с rebase для избежания stale info
-    - name: Pull latest changes to avoid stale info
-      run: |
-        git config --local user.email "action@github.com"
-        git config --local user.name "GitHub Action"
-        git pull --rebase origin ${{ github.ref_name }} || echo "Rebase failed, check for conflicts"
-
     - name: Add, commit, and push changes
       run: |
         git add .  # Добавляет все изменения (модели, визуализации, README и т.д.)
@@ -200,7 +201,7 @@ jobs:
         if ! git diff --staged --quiet; then
           git commit -m "Update forecasts, visualizations, and README"
           # Убираем --force-with-lease, чтобы избежать перезаписи; используем обычный push
-          git push https://${{ github.actor }}:${{ secrets.PAT }}@github.com/${{ github.repository }}.git ${{ github.ref_name }}
+          git push https://${{ github.actor }}:${{ secrets.REPO_ACCESS_TOKEN }}@github.com/${{ github.repository }}.git ${{ github.ref_name }}
           echo "Changes committed and pushed."
         else
           echo "No changes to commit."
