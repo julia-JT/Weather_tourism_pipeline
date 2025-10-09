@@ -178,16 +178,13 @@ jobs:
       run: |
         echo "Contents of data/ after training:"
         ls -la data/ || echo "Data directory not found"
-        echo "Files in data/ (first 10):"
+        "Files in data/ (first 10):"
         find data/ -type f | head -10 || echo "No files found in data/"
-    - name: Update README with visualizations
+
+    # Новый шаг: Обновление README с погодными данными (заменяет старый шаг "Update README with visualizations")
+    - name: Update README with weather data
       run: |
-        # Добавляет секцию с визуализациями в конец README.md (даже если файлов нет, секция добавится)
-        echo "" >> README.md
-        echo "## Визуализации" >> README.md
-        echo "![Comfort Index](data/visualizations/comfort_index.png)" >> README.md
-        echo "![Temperature](data/visualizations/temperature.png)" >> README.md
-        # Добавьте больше строк, если нужно (например, для других графиков)
+        python scripts/update_readme.py || echo "Failed to update README"
 
     # Новый шаг: Pull с rebase для избежания stale info
     - name: Pull latest changes to avoid stale info
