@@ -74,7 +74,7 @@ jobs:
     - name: Check if raw files exist for cleaning
       id: check_raw
       run: |
-        if find data/ -type f -name "*.json" | grep -q .; then
+        if [ -n "$(find data/ -type f -name "*.json" | head -1)" ]; then
           echo "has_raw_files=true" >> $GITHUB_OUTPUT
         else
           echo "has_raw_files=false" >> $GITHUB_OUTPUT
@@ -101,7 +101,7 @@ jobs:
     - name: Check if cleaned files exist for enrichment
       id: check_cleaned
       run: |
-        if find data/ -type f | grep -q .; then
+        if [ -n "$(find data/ -type f | head -1)" ]; then
           echo "has_cleaned_files=true" >> $GITHUB_OUTPUT
         else
           echo "has_cleaned_files=false" >> $GITHUB_OUTPUT
@@ -128,7 +128,7 @@ jobs:
     - name: Check if enriched files exist for reports
       id: check_enriched
       run: |
-        if find data/ -type f | grep -q .; then
+        if [ -n "$(find data/ -type f | head -1)" ]; then
           echo "has_enriched_files=true" >> $GITHUB_OUTPUT
         else
           echo "has_enriched_files=false" >> $GITHUB_OUTPUT
@@ -163,7 +163,7 @@ jobs:
     - name: Check if files exist for training
       id: check_for_train
       run: |
-        if find data/ -type f | grep -q .; then
+        if [ -n "$(find data/ -type f | head -1)" ]; then
           echo "has_files_for_train=true" >> $GITHUB_OUTPUT
         else
           echo "has_files_for_train=false" >> $GITHUB_OUTPUT
@@ -194,7 +194,7 @@ jobs:
     - name: Check if aggregated files exist for visualizations
       id: check_aggregated
       run: |
-        if find data/aggregated -type f | grep -q .; then
+        if [ -n "$(find data/aggregated -type f | head -1)" ]; then
           echo "has_aggregated_files=true" >> $GITHUB_OUTPUT
         else
           echo "has_aggregated_files=false" >> $GITHUB_OUTPUT
