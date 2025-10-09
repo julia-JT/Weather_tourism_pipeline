@@ -114,8 +114,8 @@ def train_and_forecast(df, city, tomorrow_date):
     forecast_df = pd.DataFrame({
         'city': [city],
         'forecast_date': [tomorrow_date],
-        'predicted_temp_day': [predicted_day],
-        'predicted_temp_night': [predicted_night],
+        'predicted_temp_day': [round(predicted_day)],  # Округление до целого
+        'predicted_temp_night': [round(predicted_night)],  # Округление до целого
         'model_type': ['LinearRegression']
     })
     return forecast_df
