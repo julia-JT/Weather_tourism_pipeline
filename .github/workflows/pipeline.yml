@@ -183,12 +183,14 @@ jobs:
         ls -la data/models/forecast/ || echo "data/models/forecast/ directory does not exist or is empty"
         echo "Checking data/visualizations/ directory:"
         ls -la data/visualizations/ || echo "data/visualizations/ directory does not exist or is empty"
-    - name: Verify files after training and visualizations
+    - name: Verify files after reports
       run: |
-        echo "Contents of data/ after training:"
+        echo "Contents of data/ after reports:"
         ls -la data/ || echo "Data directory not found"
-        echo "Files in data/ (first 10):"
-        find data/ -type f | head -10 || echo "No files found in data/"
+        echo "All files in data/ (sorted by modification time):"
+        find data/ -type f -printf '%T@ %p\n' | sort -n | cut -d' ' -f2- || echo "No files found"
+        echo "Aggregated files specifically:"
+        find data/aggregated/ -type f || echo "No aggregated files found"
 
     # Новый шаг: Проверка наличия aggregated файлов перед генерацией визуализаций
     - name: Check if aggregated files exist for visualizations
