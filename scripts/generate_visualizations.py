@@ -4,240 +4,136 @@ import matplotlib.pyplot as plt
 from datetime import datetime, timedelta
 
 # Папки
-enriched_dir = os.path.join(os.path.dirname(__file__), '..', 'data', 'enriched')
-forecasts_dir = os.path.join(os.path.dirname(__file__), '..', 'data', 'models', 'forecast')
+aggregated_dir = os.path.join(os.path.dirname(__file__), '..', 'data', 'aggregated')
 visualizations_dir = os.path.join(os.path.dirname(__file__), '..', 'data', 'visualizations')
-os.makedirs(forecasts_dir, exist_ok=True)
+readme_path = os.path.join(os.path.dirname(__file__), '..', 'README.md')  # Путь к README.md
 os.makedirs(visualizations_dir, exist_ok=True)
 
-# Функция для загрузки исторических данных
-def load_historical_data():
-    if not os.path.exists(enriched_dir):
-        print(f"Папка {enriched_dir} не найдена.")
-        return pd.DataFrame()
-    
-    all_files = [f for f in os.listdir(enriched_dir) if f.endswith('.csv')]
-    if not all_files:
-        print(f"Нет CSV-файлов в {enriched_dir}.")
-        return pd.DataFrame()
-    
-    df_list = []
-    for file in all_files:
-        file_path = os.path.join(enriched_dir, file)
-        try:
-            df = pd.read_csv(file_path, encoding='utf-8')
-            # Используем столбец 'city_name' вместо имени файла
-            df['city'] = df.get('city_name', 'Unknown')  # Если столбца нет, 'Unknown'
-            # Преобразуем дату
-            if 'collection_time' in df.columns:
-                df['as_of_date'] = pd.to_datetime(df['collection_time'], errors='coerce')
-            elif 'date' in df.columns:  # Альтернатива, если столбец называется 'date'
-                df['as_of_date'] = pd.to_datetime(df['date'], errors='coerce')
-            else:
-                print(f"WARNING: Нет столбца даты в {file_path}. Пропускаем.")
-                continue
-            df_list.append(df)
-        except Exception as e:
-            print(f"Ошибка при загрузке {file_path}: {e}")
-            continue
-    if df_list:
-        df_all = pd.concat(df_list, ignore_index=True).sort_values('as_of_date').drop_duplicates()
-        return df_all
-    else:
-        return pd.DataFrame()
-
-# Функция для загрузки прогнозов (из одного файла Forecast.csv)
-def load_forecast():
-    forecast_file = os.path.join(forecasts_dir, 'Forecast.csv')
-    if not os.path.exists(forecast_file):
-        print(f"Файл {forecast_file} не найден.")
+# Функция для загрузки данных из aggregated слоя
+def load_aggregated_data(filename):
+    file_path = os.path.join(aggregated_dir, filename)
+    if not os.path.exists(file_path):
+        print(f"Файл {file_path} не найден.")
         return pd.DataFrame()
     
     try:
-        df = pd.read_csv(forecast_file, encoding='utf-8')
-        # Преобразуем as_of_date и forecast_date в datetime
+        df = pd.read_csv(file_path, encoding='utf-8')
+        # Преобразуем as_of_date в datetime, если есть
         if 'as_of_date' in df.columns:
             df['as_of_date'] = pd.to_datetime(df['as_of_date'], errors='coerce')
-        if 'forecast_date' in df.columns:
-            df['forecast_date'] = pd.to_datetime(df['forecast_date'], errors='coerce')
         return df
     except Exception as e:
-        print(f"Ошибка при загрузке {forecast_file}: {e}")
+        print(f"Ошибка при загрузке {file_path}: {e}")
         return pd.DataFrame()
-# Функция для генерации двойного графика динамики температуры
-def generate_temperature_trend_plot():
-    # Загрузить исторические данные (используем вашу функцию load_historical_data)
-    df_hist = load_historical_data()
-    if df_hist.empty:
-        print("Нет исторических данных для графика динамики температуры.")
-        return
+
+# Функция для генерации графика динамики avg_comfort_index из city_tourism_rating.csv
+def generate_comfort_index_trend(df):
+    if df.empty or 'as_of_date' not in df.columns or 'avg_comfort_index' not in df.columns:
+        print("Нет данных для графика динамики avg_comfort_index.")
+        return "", ""
     
-    # Группировка по дате и городу
-    df_hist['date'] = df_hist['as_of_date'].dt.date
-    daily_temp = df_hist.groupby(['date', 'city'])['temperature'].mean().reset_index()
+    # Группировка по as_of_date (предполагаем, что данные уже агрегированы по городам, но если нужно, добавьте группировку)
+    df_trend = df.groupby('as_of_date')['avg_comfort_index'].mean().reset_index()
     
-    # Создать двойной график: day и night (предполагаем, что данные имеют интервалы, но для простоты используем общую температуру; если нужно разделить, добавьте логику)
-    # Если у вас есть разделение на day/night, используйте pivot как в train_weather_model.py
-    plt.figure(figsize=(14, 8))
-    
-    for city in daily_temp['city'].unique():
-        city_data = daily_temp[daily_temp['city'] == city]
-        # Для простоты: одна линия на город (средняя температура). Если нужно day/night, добавьте субплоты или две линии.
-        plt.plot(city_data['date'], city_data['temperature'], label=f'{city} (средняя)')
-    
+    plt.figure(figsize=(12, 6))
+    plt.plot(df_trend['as_of_date'], df_trend['avg_comfort_index'], marker='o', label='Средний Comfort Index')
     plt.xlabel('Дата')
-    plt.ylabel('Температура (°C)')
-    plt.title('Динамика температуры по городам за все время')
+    plt.ylabel('Средний Comfort Index')
+    plt.title('Динамика изменений avg_comfort_index от as_of_date')
     plt.legend()
     plt.grid(True)
     plt.xticks(rotation=45)
     plt.tight_layout()
-    trend_plot_path = os.path.join(visualizations_dir, 'temperature_trend.png')
-    plt.savefig(trend_plot_path)
-    plt.close()
-    print(f"Двойной график динамики температуры сохранён в {trend_plot_path}")
-
-# Функция для генерации графиков
-def generate_plots():
-    # Загрузить данные
-    df_hist = load_historical_data()
-    df_forecast = load_forecast()
-    
-    if df_hist.empty:
-        print("Нет исторических данных для визуализаций.")
-        return
-    
-    # Группировка по дате и городу для исторических данных
-    df_hist['date'] = df_hist['as_of_date'].dt.date
-    daily_comfort = df_hist.groupby(['date', 'city'])['comfort_index'].mean().reset_index()
-    daily_temp = df_hist.groupby(['date', 'city'])['temperature'].mean().reset_index()
-    
-    # Фильтруем прогнозы по последнему as_of_date (самому свежему)
-    if not df_forecast.empty and 'as_of_date' in df_forecast.columns:
-        latest_as_of_date = df_forecast['as_of_date'].max()
-        df_forecast = df_forecast[df_forecast['as_of_date'] == latest_as_of_date]
-    
-    # Рассчитаем ошибки прогноза: для каждого прогноза найти реальную температуру на forecast_date
-    forecast_errors = []
-    if not df_forecast.empty and 'forecast_date' in df_forecast.columns and 'predicted_temp' in df_forecast.columns and 'city' in df_forecast.columns:
-        for _, forecast_row in df_forecast.iterrows():
-            city = forecast_row['city']
-            forecast_date = forecast_row['forecast_date'].date()
-            predicted_temp = forecast_row['predicted_temp']
-            
-            # Найти реальную среднюю температуру на эту дату из исторических данных
-            real_temp_row = daily_temp[(daily_temp['city'] == city) & (daily_temp['date'] == forecast_date)]
-            if not real_temp_row.empty:
-                real_temp = real_temp_row['temperature'].iloc[0]
-                error = predicted_temp - real_temp
-                forecast_errors.append({
-                    'city': city,
-                    'forecast_date': forecast_date,
-                    'predicted_temp': predicted_temp,
-                    'real_temp': real_temp,
-                    'error': error
-                })
-    generate_temperature_trend_plot() 
-    df_errors = pd.DataFrame(forecast_errors)
-    
-    # График 1: Comfort Index и прогноз температуры по городам (разделены на подграфики)
-    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 10), sharex=True)
-    
-    # Подграфик 1: Comfort Index
-    for city in daily_comfort['city'].unique():
-        city_data = daily_comfort[daily_comfort['city'] == city]
-        ax1.plot(city_data['date'], city_data['comfort_index'], label=f'Comfort Index ({city})')
-    
-    ax1.set_ylabel('Comfort Index')
-    ax1.set_title('Comfort Index по городам')
-    ax1.legend()
-    ax1.grid(True)
-    
-    # Подграфик 2: Температура с прогнозами
-    for city in daily_temp['city'].unique():
-        city_data = daily_temp[daily_temp['city'] == city]
-        ax2.plot(city_data['date'], city_data['temperature'], label=f'Историческая температура ({city})')
-        
-        # Добавить прогноз температуры для этого города
-        if not df_forecast.empty and 'forecast_date' in df_forecast.columns and 'predicted_temp' in df_forecast.columns:
-            city_forecast = df_forecast[df_forecast['city'] == city]
-            if not city_forecast.empty:
-                forecast_date = city_forecast['forecast_date'].iloc[0].date()
-                forecast_temp = city_forecast['predicted_temp'].iloc[0]
-                ax2.scatter(forecast_date, forecast_temp, label=f'Прогноз ({city})', s=100, marker='o', color='red')
-                
-                # Добавить реальную температуру на forecast_date, если есть
-                real_temp_row = daily_temp[(daily_temp['city'] == city) & (daily_temp['date'] == forecast_date)]
-                if not real_temp_row.empty:
-                    real_temp = real_temp_row['temperature'].iloc[0]
-                    ax2.scatter(forecast_date, real_temp, label=f'Реальная ({city})', s=100, marker='x', color='blue')
-    
-    ax2.set_xlabel('Дата')
-    ax2.set_ylabel('Температура (°C)')
-    ax2.set_title('Температура по городам с прогнозами и реальными данными')
-    ax2.legend()
-    ax2.grid(True)
-    plt.xticks(rotation=45)
-    plt.tight_layout()
-    plot_path = os.path.join(visualizations_dir, 'comfort_index_and_temp_by_city.png')
+    plot_path = os.path.join(visualizations_dir, 'comfort_index_trend.png')
     plt.savefig(plot_path)
     plt.close()
-    print(f"График comfort index и температуры сохранён в {plot_path}")
+    print(f"График динамики avg_comfort_index сохранён в {plot_path}")
     
-    # График 2: Температура с прогнозами по городам (оставлен как есть, но с проверками)
+    # Таблица на последний as_of_date
+    latest_date = df['as_of_date'].max()
+    df_latest = df[df['as_of_date'] == latest_date]
+    table_md = df_latest.to_markdown(index=False) if not df_latest.empty else "Нет данных на последнюю дату."
+    
+    return plot_path, table_md
+
+# Функция для генерации гистограммы из federal_districts_summary.csv
+def generate_district_histogram(df):
+    if df.empty or 'as_of_date' not in df.columns:
+        print("Нет данных для гистограммы federal_districts_summary.")
+        return "", ""
+    
+    # Фильтр на максимальную as_of_date
+    latest_date = df['as_of_date'].max()
+    df_latest = df[df['as_of_date'] == latest_date]
+    
+    if df_latest.empty or 'avg_temperature' not in df_latest.columns or 'comfortable_cities' not in df_latest.columns:
+        print("Нет столбцов avg_temperature или comfortable_cities.")
+        return "", ""
+    
+    # Гистограмма: столбцы для avg_temperature и comfortable_cities (предполагаем, что comfortable_cities - числовой, например, count)
     plt.figure(figsize=(12, 6))
-    for city in daily_temp['city'].unique():
-        city_data = daily_temp[daily_temp['city'] == city]
-        plt.plot(city_data['date'], city_data['temperature'], label=f'Историческая температура ({city})')
-        
-        # Добавить прогноз температуры для этого города
-        if not df_forecast.empty and 'forecast_date' in df_forecast.columns and 'predicted_temp' in df_forecast.columns:
-            city_forecast = df_forecast[df_forecast['city'] == city]
-            if not city_forecast.empty:
-                forecast_date = city_forecast['forecast_date'].iloc[0].date()
-                forecast_temp = city_forecast['predicted_temp'].iloc[0]
-                plt.scatter(forecast_date, forecast_temp, label=f'Прогноз ({city})', s=100, marker='o', color='red')
-                
-                # Добавить реальную температуру на forecast_date, если есть
-                real_temp_row = daily_temp[(daily_temp['city'] == city) & (daily_temp['date'] == forecast_date)]
-                if not real_temp_row.empty:
-                    real_temp = real_temp_row['temperature'].iloc[0]
-                    plt.scatter(forecast_date, real_temp, label=f'Реальная ({city})', s=100, marker='x', color='blue')
-    
-    plt.xlabel('Дата')
-    plt.ylabel('Температура (°C)')
-    plt.title('Средняя температура по дням и городам с прогнозами и реальными данными')
+    plt.bar(df_latest.index, df_latest['avg_temperature'], label='Средняя температура', alpha=0.7)
+    plt.bar(df_latest.index, df_latest['comfortable_cities'], label='Комфортные города', alpha=0.7)
+    plt.xlabel('Записи')
+    plt.ylabel('Значения')
+    plt.title(f'Гистограмма avg_temperature и comfortable_cities на {latest_date.date()}')
     plt.legend()
     plt.grid(True)
-    plt.xticks(rotation=45)
     plt.tight_layout()
-    temp_plot_path = os.path.join(visualizations_dir, 'temperature_by_city.png')
-    plt.savefig(temp_plot_path)
+    plot_path = os.path.join(visualizations_dir, 'district_histogram.png')
+    plt.savefig(plot_path)
     plt.close()
-    print(f"График температуры сохранён в {temp_plot_path}")
+    print(f"Гистограмма сохранена в {plot_path}")
     
-    # График 3: Ошибки прогноза (новый)
-    if not df_errors.empty:
-        plt.figure(figsize=(12, 6))
-        for city in df_errors['city'].unique():
-            city_errors = df_errors[df_errors['city'] == city]
-            plt.scatter(city_errors['forecast_date'], city_errors['error'], label=f'Ошибка прогноза ({city})', s=100)
-        
-        plt.axhline(y=0, color='black', linestyle='--', label='Идеальный прогноз (ошибка=0)')
-        plt.xlabel('Дата прогноза')
-        plt.ylabel('Ошибка (°C) (Прогноз - Реальность)')
-        plt.title('Ошибки прогноза температуры по городам')
-        plt.legend()
-        plt.grid(True)
-        plt.xticks(rotation=45)
-        plt.tight_layout()
-        error_plot_path = os.path.join(visualizations_dir, 'forecast_errors.png')
-        plt.savefig(error_plot_path)
-        plt.close()
-        print(f"График ошибок прогноза сохранён в {error_plot_path}")
-    else:
-        print("Нет данных для графика ошибок прогноза (возможно, нет совпадений дат или прогнозов).")
+    return plot_path, ""
+
+# Функция для вывода значений из travel_recommendations.csv
+def generate_recommendations_text(df):
+    if df.empty or 'as_of_date' not in df.columns:
+        print("Нет данных для travel_recommendations.")
+        return ""
+    
+    # Фильтр на максимальную as_of_date
+    latest_date = df['as_of_date'].max()
+    df_latest = df[df['as_of_date'] == latest_date]
+    
+    if df_latest.empty:
+        return "Нет данных на максимальную дату."
+    
+    # Вывести значения столбцов в отдельной строке (предполагаем, что одна строка, или агрегировать)
+    row = df_latest.iloc[0] if not df_latest.empty else {}
+    text = f"Рекомендации на {latest_date.date()}: " + ", ".join([f"{col}: {row[col]}" for col in df_latest.columns if col != 'as_of_date'])
+    return text
+
+# Основная функция для генерации визуализаций и обновления README.md
+def generate_visualizations():
+    readme_content = "# Визуализации данных\n\n"
+    
+    # 1. city_tourism_rating.csv
+    df_rating = load_aggregated_data('city_tourism_rating.csv')
+    plot_path, table_md = generate_comfort_index_trend(df_rating)
+    if plot_path:
+        readme_content += f"## Динамика avg_comfort_index\n\n![График динамики]({plot_path})\n\n"
+    if table_md:
+        readme_content += f"### Сводная таблица на последний as_of_date\n\n{table_md}\n\n"
+    
+    # 2. federal_districts_summary.csv
+    df_district = load_aggregated_data('federal_districts_summary.csv')
+    plot_path, _ = generate_district_histogram(df_district)
+    if plot_path:
+        readme_content += f"## Гистограмма по федеральным округам\n\n![Гистограмма]({plot_path})\n\n"
+    
+    # 3. travel_recommendations.csv
+    df_recommend = load_aggregated_data('travel_recommendations.csv')
+    text = generate_recommendations_text(df_recommend)
+    if text:
+        readme_content += f"## Рекомендации для путешествий\n\n{text}\n\n"
+    
+    # Запись в README.md
+    with open(readme_path, 'w', encoding='utf-8') as f:
+        f.write(readme_content)
+    print(f"README.md обновлён с визуализациями в {readme_path}")
 
 # Запуск
 if __name__ == "__main__":
-    generate_plots()
+    generate_visualizations()
