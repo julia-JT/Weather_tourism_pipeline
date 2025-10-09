@@ -1,6 +1,7 @@
 import pandas as pd
 import os
 import re
+import glob  # Добавлено для динамического сканирования файлов графиков
 from datetime import datetime
 
 # Папки (добавил проверки существования папок)
@@ -50,15 +51,21 @@ def load_forecast_data():
 def generate_markdown(data, forecast_df):
     md = "### Данные о погоде\n\n"
     
-    # Графики из generate_visualizations.py
+    # Динамическое сканирование и добавление графиков
     md += "#### Графики\n"
-    if os.path.exists(os.path.join(visualizations_dir, 'comfort_index_trend.png')):
-        md += "![Динамика avg_comfort_index](data/visualizations/comfort_index_trend.png)\n\n"
-    if os.path.exists(os.path.join(visualizations_dir, 'district_histogram.png')):
-        md += "![Гистограмма по федеральным округам](data/visualizations/district_histogram.png)\n\n"
-    # Добавляем старый график, если он есть (из модели, но поскольку generate_visualizations.py не генерирует его, опционально)
-    if os.path.exists(os.path.join(visualizations_dir, 'temperature_trend.png')):
-        md += "![Динамика температуры](data/visualizations/temperature_trend.png)\n\n"
+    graph_extensions = ['*.png', '*.jpg', '*.jpeg']
+    graph_files = []
+    for ext in graph_extensions:
+        graph_files.extend(glob.glob(os.path.join(visualizations_dir, ext)))
+    
+    if graph_files:
+        for graph_file in sorted(graph_files):  # Сортировка для предсказуемости
+            graph_name = os.path.basename(graph_file)
+            # Предполагаем, что название графика - это имя файла без расширения, но можно улучшить (например, заменить _ на пробелы)
+            display_name = graph_name.replace('_', ' ').replace('.png', '').replace('.jpg', '').replace('.jpeg', '').title()
+            md += f"![{display_name}](data/visualizations/{graph_name})\n\n"
+    else:
+        md += "Нет доступных визуализаций.\n\n"
     
     # Таблицы из aggregated данных
     if 'city_tourism_rating' in data:
@@ -79,9 +86,6 @@ def generate_markdown(data, forecast_df):
     if not forecast_df.empty:
         md += "#### Прогнозы температуры\n"
         md += forecast_df.to_markdown(index=False) + "\n\n"
-        # Добавляем графики ошибок, если они есть (предполагаем, что generate_visualizations.py может генерировать их, но в текущем коде нет; добавьте, если нужно)
-        if os.path.exists(os.path.join(visualizations_dir, 'forecast_errors.png')):
-            md += "![Ошибки прогноза](data/visualizations/forecast_errors.png)\n\n"
     
     return md
 
