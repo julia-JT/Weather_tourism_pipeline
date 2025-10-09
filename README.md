@@ -8,6 +8,9 @@ Weather_tourism_pipeline
 ![Comfort Index](data/visualizations/comfort_index.png)
 ![Temperature](data/visualizations/temperature.png)
 
+<!-- WEATHER DATA START -->
+<!-- WEATHER DATA END -->
+
 ## Визуализации
 ![Comfort Index](data/visualizations/comfort_index.png)
 ![Temperature](data/visualizations/temperature.png)
