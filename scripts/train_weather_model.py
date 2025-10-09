@@ -72,6 +72,7 @@ def train_and_forecast(df, city, tomorrow_date):
         print(f"Необходимые колонки отсутствуют в данных для города {city}")
         return pd.DataFrame()
     
+    df_city = df_city.copy()
     df_city['date'] = pd.to_datetime(df_city['date'])
     df_city = df_city.sort_values('date')
     df_city['day_of_year'] = df_city['date'].dt.dayofyear
@@ -91,7 +92,7 @@ def train_and_forecast(df, city, tomorrow_date):
     y_night = df_city['temp_night']
     X_train_night, X_test_night, y_train_night, y_test_night = train_test_split(X, y_night, test_size=0.2, random_state=42)
     model_night = LinearRegression()
-    model_night.fit(X_train_night, y_night)
+    model_night.fit(X_train_night, y_train_night)
     
     # Прогноз на завтра
     tomorrow_day = pd.to_datetime(tomorrow_date).dayofyear
