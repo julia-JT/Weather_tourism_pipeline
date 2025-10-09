@@ -2,7 +2,7 @@ name: Data Pipeline
 
 on:
   schedule:
-    - cron: '0 * * * *'  # Каждый час
+    - cron: '0 * * *'  # Каждый час
   workflow_dispatch:  # Ручной запуск
 
 jobs:
@@ -37,6 +37,7 @@ jobs:
       run: |
         pip install --upgrade pip
         pip install -r requirements.txt  # Если есть requirements.txt
+        pip install tabulate  # Добавлено для исправления ошибки в update_readme.py
         # Или напрямую: pip install prophet
         # pip install -r requirements.txt  # Удалено дублирование
     - name: Create data directories
@@ -188,6 +189,28 @@ jobs:
         ls -la data/ || echo "Data directory not found"
         echo "Files in data/ (first 10):"
         find data/ -type f | head -10 || echo "No files found in data/"
+
+    # Новый шаг: Проверка наличия aggregated файлов перед генерацией визуализаций
+    - name: Check if aggregated files exist for visualizations
+      id: check_aggregated
+      run: |
+        if find data/aggregated -type f | grep -q .; then
+          echo "has_aggregated_files=true" >> $GITHUB_OUTPUT
+        else
+          echo "has_aggregated_files=false" >> $GITHUB_OUTPUT
+          echo "No aggregated files found. Skipping visualizations."
+        fi
+    # Новый шаг: Генерация визуализаций из generate_visualizations.py
+    - name: Generate visualizations
+      if: steps.check_aggregated.outputs.has_aggregated_files == 'true'
+      run: |
+        python scripts/generate_visualizations.py || echo "Visualization generation failed"
+    # Новый шаг: Проверка файлов после генерации визуализаций
+    - name: Verify files after visualizations
+      run: |
+        echo "Contents of data/visualizations/ after visualizations:"
+        ls -la data/visualizations/ || echo "data/visualizations/ directory not found"
+        find data/visualizations/ -type f | head -10 || echo "No visualization files found"
 
     # Новый шаг: Обновление README с погодными данными (заменяет старый шаг "Update README with visualizations")
     - name: Update README with weather data
