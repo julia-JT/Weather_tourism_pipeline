@@ -5,6 +5,7 @@ from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error
 import matplotlib.pyplot as plt
+from matplotlib.dates import DateFormatter  # Добавлено для форматирования дат
 import pickle
 
 # Папки
@@ -94,10 +95,10 @@ def train_and_forecast(df, city, tomorrow_date):
     model_night = LinearRegression()
     model_night.fit(X_train_night, y_train_night)
     
-    # Прогноз на завтра
+    # Прогноз на завтра (исправлено: передаём DataFrame с именами колонок для совместимости с sklearn)
     tomorrow_day = pd.to_datetime(tomorrow_date).dayofyear
-    predicted_day = model_day.predict([[tomorrow_day]])[0]
-    predicted_night = model_night.predict([[tomorrow_day]])[0]
+    predicted_day = model_day.predict(pd.DataFrame([[tomorrow_day]], columns=['day_of_year']))[0]
+    predicted_night = model_night.predict(pd.DataFrame([[tomorrow_day]], columns=['day_of_year']))[0]
     
     # Сохранение моделей (с try-except для отладки)
     try:
@@ -131,14 +132,20 @@ def create_visualizations(df):
         print("Колонка 'date' отсутствует для визуализаций.")
         return
     
+    # Диагностика: проверьте уникальные даты в df (для отладки)
+    print(f"Уникальные даты в enriched данных: {sorted(df['date'].unique())}")
+    print(f"Диапазон дат: от {df['date'].min()} до {df['date'].max()}")
+    
     # Визуализация дневной температуры по городам
     plt.figure(figsize=(10, 6))
     for city in df['city'].unique():
         city_data = df[df['city'] == city]
         plt.plot(city_data['date'], city_data['temp_day'], label=f"{city} - Day")
     plt.title('Day Temperature Over Time by City')
-    plt.xlabel('Date')
+    plt.xlabel('Date (DD_MM)')
     plt.ylabel('Day Temperature (°C)')
+    plt.gca().xaxis.set_major_formatter(DateFormatter('%d_%m'))  # Формат DD_MM
+    plt.xticks(rotation=45)
     plt.legend()
     plt.savefig(os.path.join(visualizations_dir, 'temperature_day.png'))
     plt.close()
@@ -149,8 +156,10 @@ def create_visualizations(df):
         city_data = df[df['city'] == city]
         plt.plot(city_data['date'], city_data['temp_night'], label=f"{city} - Night")
     plt.title('Night Temperature Over Time by City')
-    plt.xlabel('Date')
+    plt.xlabel('Date (DD_MM)')
     plt.ylabel('Night Temperature (°C)')
+    plt.gca().xaxis.set_major_formatter(DateFormatter('%d_%m'))  # Формат DD_MM
+    plt.xticks(rotation=45)
     plt.legend()
     plt.savefig(os.path.join(visualizations_dir, 'temperature_night.png'))
     plt.close()
