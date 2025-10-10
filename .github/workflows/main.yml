@@ -275,15 +275,18 @@ jobs:
       if: steps.update_readme.outcome == 'success'
       run: |
         git status
+        git add .
+        if ! git diff --staged --quiet; then
+          git commit -m "Automated update: weather data, models, and reports"
+        fi
         git fetch origin
         git pull --rebase origin/${{ github.ref_name }} || (echo "Rebase failed" && git rebase --abort && exit 1)
+        # Если после rebase появились изменения (например, от merge), commit их
         git add .
-        if git diff --staged --quiet; then
-          echo "No changes to commit"
-        else
-          git commit -m "Update README with latest data"
-          git push origin ${{ github.ref_name }}
+        if ! git diff --staged --quiet; then
+          git commit -m "Additional updates after rebase"
         fi
+        git push origin ${{ github.ref_name }}
 
     - name: Verify push
       if: steps.commit_push.outcome == 'success'
