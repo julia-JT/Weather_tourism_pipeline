@@ -3,6 +3,7 @@ import os
 import re
 import glob  # Добавлено для динамического сканирования файлов графиков
 from datetime import datetime
+import subprocess  # Добавлено для git операций
 
 # Папки (добавил проверки существования папок)
 aggregated_dir = os.path.join(os.path.dirname(__file__), '..', 'data', 'aggregated')
@@ -51,9 +52,9 @@ def load_forecast_data():
 def generate_markdown(data, forecast_df):
     md = "### Данные о погоде\n\n"
     
-    # Динамическое сканирование и добавление графиков
+    # Динамическое сканирование и добавление графиков (расширен для HTML из train_weather_model.py)
     md += "#### Графики\n"
-    graph_extensions = ['*.png', '*.jpg', '*.jpeg']
+    graph_extensions = ['*.png', '*.jpg', '*.jpeg', '*.html']  # Добавлен *.html для Plotly визуализаций
     graph_files = []
     for ext in graph_extensions:
         graph_files.extend(glob.glob(os.path.join(visualizations_dir, ext)))
@@ -61,13 +62,17 @@ def generate_markdown(data, forecast_df):
     if graph_files:
         for graph_file in sorted(graph_files):  # Сортировка для предсказуемости
             graph_name = os.path.basename(graph_file)
-            # Предполагаем, что название графика - это имя файла без расширения, но можно улучшить (например, заменить _ на пробелы)
-            display_name = graph_name.replace('_', ' ').replace('.png', '').replace('.jpg', '').replace('.jpeg', '').title()
-            md += f"![{display_name}](data/visualizations/{graph_name})\n\n"
+            display_name = graph_name.replace('_', ' ').replace('.png', '').replace('.jpg', '').replace('.jpeg', '').replace('.html', '').title()
+            if graph_name.endswith('.html'):
+                # Для HTML (Plotly) добавляем ссылку, так как GitHub не рендерит интерактивный HTML
+                md += f"[{display_name}](data/visualizations/{graph_name})\n\n"
+            else:
+                # Для изображений добавляем как картинку
+                md += f"![{display_name}](data/visualizations/{graph_name})\n\n"
     else:
         md += "Нет доступных визуализаций.\n\n"
     
-    # Таблицы из aggregated данных
+    # Таблицы из aggregated данных (без изменений)
     if 'city_tourism_rating' in data:
         md += "#### Рейтинг туризма по городам\n"
         md += data['city_tourism_rating'].to_markdown(index=False) + "\n\n"
@@ -82,14 +87,46 @@ def generate_markdown(data, forecast_df):
             row = data['travel_recommendations'].iloc[0] if not data['travel_recommendations'].empty else {}
             md += f"Рекомендации на {latest_date.date()}: " + ", ".join([f"{col}: {row[col]}" for col in data['travel_recommendations'].columns if col != 'as_of_date']) + "\n\n"
     
-    # Данные из модели (прогнозы)
+    # Данные из модели (прогнозы) (без изменений)
     if not forecast_df.empty:
         md += "#### Прогнозы температуры\n"
         md += forecast_df.to_markdown(index=False) + "\n\n"
     
     return md
 
-# Основная логика
+# Функция для коммита и пуша изменений (без изменений)
+def commit_and_push_changes():
+    try:
+        # Сначала pull с rebase, чтобы синхронизировать с remote
+        subprocess.run(['git', 'pull', '--rebase'], check=True, capture_output=True, text=True)
+        print("Git pull --rebase выполнен успешно.")
+    except subprocess.CalledProcessError as e:
+        print(f"Ошибка при git pull --rebase: {e.stderr}")
+        # Если pull fails, попробуем allow-unrelated-histories (на случай первого пуша)
+        try:
+            subprocess.run(['git', 'pull', '--allow-unrelated-histories'], check=True, capture_output=True, text=True)
+            print("Git pull --allow-unrelated-histories выполнен успешно.")
+        except subprocess.CalledProcessError as e2:
+            print(f"Ошибка при git pull --allow-unrelated-histories: {e2.stderr}")
+            return  # Не пушим, если pull не удался
+    
+    try:
+        # Add все изменения (modified и untracked)
+        subprocess.run(['git', 'add', '.'], check=True, capture_output=True, text=True)
+        print("Git add выполнен успешно.")
+        
+        # Commit с сообщением
+        commit_message = f"Automated update: README.md with weather data, visualizations, and reports on {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+        subprocess.run(['git', 'commit', '-m', commit_message], check=True, capture_output=True, text=True)
+        print(f"Git commit выполнен успешно: {commit_message}")
+        
+        # Push
+        subprocess.run(['git', 'push'], check=True, capture_output=True, text=True)
+        print("Git push выполнен успешно.")
+    except subprocess.CalledProcessError as e:
+        print(f"Ошибка при git операциях: {e.stderr}")
+
+# Основная логика (без изменений)
 try:
     # Загрузка данных
     data = load_aggregated_data()
@@ -115,11 +152,14 @@ try:
     new_content = re.sub(pattern, replacement, content, flags=re.DOTALL)
     
     if new_content == content:
-        print("Секция WEATHER DATA не найдена в README. Проверьте маркеры.")
+        print("Секция WEATHER DATA не найдена в README. Добавьте маркеры <!-- WEATHER DATA START --> и <!-- WEATHER DATA END --> вручную.")
     else:
         with open(readme_path, 'w', encoding='utf-8') as f:
             f.write(new_content)
         print("README.md успешно обновлён.")
+        
+        # Коммит и пуш изменений
+        commit_and_push_changes()
         
 except Exception as e:
     print(f"Ошибка в update_readme.py: {e}")
