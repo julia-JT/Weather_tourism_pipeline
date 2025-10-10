@@ -6,4 +6,6 @@ matplotlib
 prophet
 scikit-learn
 tabulate
+plotly
+
 # Добавьте другие, если знаете (например, из ошибок импорта в коде)
