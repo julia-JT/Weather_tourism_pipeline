@@ -365,6 +365,10 @@ jobs:
       id: commit_push
       if: steps.update_readme.outputs.ready == 'true'
       run: |
+        # Синхронизация с remote для предотвращения non-fast-forward ошибок
+        git fetch origin
+        git pull --rebase origin/${{ github.ref_name }}
+        
         git add .  # Добавляет все изменения (модели, визуализации, README и т.д.)
         git status  # Покажет, что добавлено
         if ! git diff --staged --quiet; then
@@ -378,7 +382,6 @@ jobs:
     - name: Commit push ready
       if: steps.commit_push.outcome == 'success'
       run: echo "ready=true" >> $GITHUB_OUTPUT
-
     - name: Verify push
       if: steps.commit_push.outputs.ready == 'true'
       run: echo "Workflow completed. Check repository for changes."
