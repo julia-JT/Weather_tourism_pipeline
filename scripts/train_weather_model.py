@@ -109,7 +109,7 @@ def train_and_forecast(df, city, tomorrow_date):
     })
     return forecast_df
 
-# Функция для создания динамических визуализаций (без изменений)
+# Функция для создания динамических визуализаций (изменено: сохранение в PNG вместо HTML)
 def create_dynamic_visualizations(df, forecast_df):
     if df.empty:
         print("Нет данных для визуализаций.")
@@ -157,7 +157,7 @@ def create_dynamic_visualizations(df, forecast_df):
             )
         ]
     )
-    fig1.write_html(os.path.join(visualizations_dir, 'historical_day_temperature.html'))
+    fig1.write_image(os.path.join(visualizations_dir, 'historical_day_temperature.png'))  # Изменено на PNG
     
     fig2 = go.Figure()
     for city in df_combined['city'].unique():
@@ -177,7 +177,7 @@ def create_dynamic_visualizations(df, forecast_df):
             )
         ]
     )
-    fig2.write_html(os.path.join(visualizations_dir, 'historical_night_temperature.html'))
+    fig2.write_image(os.path.join(visualizations_dir, 'historical_night_temperature.png'))  # Изменено на PNG
     
     fig3 = go.Figure()
     for city in df_combined['city'].unique():
@@ -199,7 +199,7 @@ def create_dynamic_visualizations(df, forecast_df):
             )
         ]
     )
-    fig3.write_html(os.path.join(visualizations_dir, 'forecasted_day_temperature.html'))
+    fig3.write_image(os.path.join(visualizations_dir, 'forecasted_day_temperature.png'))  # Изменено на PNG
     
     fig4 = go.Figure()
     for city in df_combined['city'].unique():
@@ -221,9 +221,9 @@ def create_dynamic_visualizations(df, forecast_df):
             )
         ]
     )
-    fig4.write_html(os.path.join(visualizations_dir, 'forecasted_night_temperature.html'))
+    fig4.write_image(os.path.join(visualizations_dir, 'forecasted_night_temperature.png'))  # Изменено на PNG
     
-    print("Динамические визуализации сохранены в data/visualizations/ как HTML-файлы (откройте в браузере для интерактивности)")
+    print("Динамические визуализации сохранены в data/visualizations/ как PNG-файлы (статические изображения)")
 
 # Новая функция для коммита и пуша изменений с исправлениями
 def commit_and_push_changes():
