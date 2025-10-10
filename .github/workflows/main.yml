@@ -380,7 +380,7 @@ jobs:
         fi
     - name: Commit push ready
       if: steps.commit_push.outcome == 'success'
-      run: echo "ready=true" >> $GITHUB_OUTPUTломать код, раньше все работало:
+      run: echo "ready=true" >> $GITHUB_OUTPUT:
     - name: Commit push ready
       if: steps.commit_push.outcome == 'success'
       run: echo "ready=true" >> $GITHUB_OUTPUT
