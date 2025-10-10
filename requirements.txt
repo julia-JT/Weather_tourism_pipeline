@@ -7,5 +7,4 @@ prophet
 scikit-learn
 tabulate
 plotly
-pickle
 # Добавьте другие, если знаете (например, из ошибок импорта в коде)
