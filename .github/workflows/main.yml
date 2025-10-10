@@ -41,6 +41,8 @@ jobs:
         pip install --upgrade pip
         pip install -r requirements.txt  # Если есть requirements.txt
         pip install tabulate  # Добавлено для исправления ошибки в update_readme.py
+        pip install plotly
+        python -m pip install --upgrade pip
         # Или напрямую: pip install prophet
 
     - name: Create data directories
