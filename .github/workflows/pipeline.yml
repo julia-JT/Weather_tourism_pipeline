@@ -2,7 +2,7 @@ name: Data Pipeline
 
 on:
   schedule:
-    - cron: '0 * * *'  # Каждый час
+  # - cron: '0 * * *'  # Каждый час
   workflow_dispatch:  # Ручной запуск
 
 jobs:
