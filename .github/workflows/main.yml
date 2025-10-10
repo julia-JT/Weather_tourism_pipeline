@@ -365,18 +365,15 @@ jobs:
       id: commit_push
       if: steps.update_readme.outputs.ready == 'true'
       run: |
+        git status
         git fetch origin
-        git pull --rebase origin/${{ github.ref_name }}
-
-        git add .  # Добавляет все изменения (модели, визуализации, README и т.д.)
-        git status  # Покажет, что добавлено
-        if ! git diff --staged --quiet; then
-          git commit -m "Update forecasts, visualizations, and README"
-          # Убираем --force-with-lease, чтобы избежать перезаписи; используем обычный push
-          git push https://${{ github.actor }}:${{ secrets.REPO_ACCESS_TOKEN }}@github.com/${{ github.repository }}.git ${{ github.ref_name }}
-          echo "Changes committed and pushed."
+        git pull --rebase origin/${{ github.ref_name }} || (echo "Rebase failed" && git rebase --abort && exit 1)
+          # ... остальной код
+        if git diff --staged --quiet; then
+          echo "No changes to commit"
         else
-          echo "No changes to commit."
+          git commit -m "Update README with latest data"
+          git push origin ${{ github.ref_name }}
         fi
     - name: Commit push ready
       if: steps.commit_push.outcome == 'success'
