@@ -7,8 +7,9 @@ from sklearn.metrics import mean_squared_error
 import matplotlib.pyplot as plt
 from matplotlib.dates import DateFormatter
 import pickle
-import plotly.graph_objects as go  # Добавлено для динамических графиков
-from plotly.subplots import make_subplots  # Для субплотов, если нужно
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
+import subprocess  # Добавлено для выполнения git команд
 
 # Папки (без изменений)
 data_dir = os.path.join(os.path.dirname(__file__), '..', 'data')
@@ -108,7 +109,7 @@ def train_and_forecast(df, city, tomorrow_date):
     })
     return forecast_df
 
-# Новая функция для создания динамических визуализаций с Plotly
+# Функция для создания динамических визуализаций (без изменений)
 def create_dynamic_visualizations(df, forecast_df):
     if df.empty:
         print("Нет данных для визуализаций.")
@@ -118,13 +119,11 @@ def create_dynamic_visualizations(df, forecast_df):
         print("Колонка 'date' отсутствует для визуализаций.")
         return
     
-    # Диагностика (без изменений)
     print(f"Уникальные даты в enriched данных: {sorted(df['date'].unique())}")
     print(f"Диапазон дат: от {df['date'].min()} до {df['date'].max()}")
     if not forecast_df.empty:
         print(f"Прогноз на дату: {forecast_df['forecast_date'].iloc[0]}")
     
-    # Объединяем исторические данные и прогноз для визуализаций (без изменений)
     df_combined = df.copy()
     if not forecast_df.empty:
         forecast_rows = forecast_df[['city', 'forecast_date', 'predicted_temp_day', 'predicted_temp_night']].rename(
@@ -133,19 +132,16 @@ def create_dynamic_visualizations(df, forecast_df):
         forecast_rows['date'] = pd.to_datetime(forecast_rows['date'])
         df_combined = pd.concat([df_combined, forecast_rows], ignore_index=True)
     
-    # Добавляем as_of_date к df_combined (если есть в forecast_df)
     if 'as_of_date' in forecast_df.columns:
         df_combined['as_of_date'] = forecast_df['as_of_date'].iloc[0] if not forecast_df.empty else None
     else:
-        df_combined['as_of_date'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')  # Фallback
+        df_combined['as_of_date'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     
-    # Сортируем по дате
     df_combined = df_combined.sort_values('date')
     
-    # График 1: Реальные дневные температуры (интерактивный с фильтром по городу)
     fig1 = go.Figure()
     for city in df_combined['city'].unique():
-        city_data = df_combined[(df_combined['city'] == city) & (df_combined['date'] < pd.to_datetime(datetime.now().date()))]  # Только исторические
+        city_data = df_combined[(df_combined['city'] == city) & (df_combined['date'] < pd.to_datetime(datetime.now().date()))]
         fig1.add_trace(go.Scatter(x=city_data['date'], y=city_data['temp_day'], mode='lines+markers', name=f"{city} - Historical Day"))
     fig1.update_layout(
         title="Historical Day Temperature Over Time by City",
@@ -163,7 +159,6 @@ def create_dynamic_visualizations(df, forecast_df):
     )
     fig1.write_html(os.path.join(visualizations_dir, 'historical_day_temperature.html'))
     
-    # График 2: Реальные ночные температуры (аналогично)
     fig2 = go.Figure()
     for city in df_combined['city'].unique():
         city_data = df_combined[(df_combined['city'] == city) & (df_combined['date'] < pd.to_datetime(datetime.now().date()))]
@@ -184,7 +179,6 @@ def create_dynamic_visualizations(df, forecast_df):
     )
     fig2.write_html(os.path.join(visualizations_dir, 'historical_night_temperature.html'))
     
-    # График 3: Предсказанные дневные температуры (включая прогноз, с фильтром по as_of_date и городу)
     fig3 = go.Figure()
     for city in df_combined['city'].unique():
         historical = df_combined[(df_combined['city'] == city) & (df_combined['date'] < pd.to_datetime(datetime.now().date()))]
@@ -207,7 +201,6 @@ def create_dynamic_visualizations(df, forecast_df):
     )
     fig3.write_html(os.path.join(visualizations_dir, 'forecasted_day_temperature.html'))
     
-    # График 4: Предсказанные ночные температуры (аналогично)
     fig4 = go.Figure()
     for city in df_combined['city'].unique():
         historical = df_combined[(df_combined['city'] == city) & (df_combined['date'] < pd.to_datetime(datetime.now().date()))]
@@ -232,7 +225,39 @@ def create_dynamic_visualizations(df, forecast_df):
     
     print("Динамические визуализации сохранены в data/visualizations/ как HTML-файлы (откройте в браузере для интерактивности)")
 
-# Основная функция (обновлено: вызов новой функции визуализаций)
+# Новая функция для коммита и пуша изменений с исправлениями
+def commit_and_push_changes():
+    try:
+        # Сначала pull с rebase, чтобы синхронизировать с remote
+        subprocess.run(['git', 'pull', '--rebase'], check=True, capture_output=True, text=True)
+        print("Git pull --rebase выполнен успешно.")
+    except subprocess.CalledProcessError as e:
+        print(f"Ошибка при git pull --rebase: {e.stderr}")
+        # Если pull fails, попробуем allow-unrelated-histories (на случай первого пуша)
+        try:
+            subprocess.run(['git', 'pull', '--allow-unrelated-histories'], check=True, capture_output=True, text=True)
+            print("Git pull --allow-unrelated-histories выполнен успешно.")
+        except subprocess.CalledProcessError as e2:
+            print(f"Ошибка при git pull --allow-unrelated-histories: {e2.stderr}")
+            return  # Не пушим, если pull не удался
+    
+    try:
+        # Add все изменения (modified и untracked)
+        subprocess.run(['git', 'add', '.'], check=True, capture_output=True, text=True)
+        print("Git add выполнен успешно.")
+        
+        # Commit с сообщением
+        commit_message = f"Automated update: weather data, models, and reports on {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+        subprocess.run(['git', 'commit', '-m', commit_message], check=True, capture_output=True, text=True)
+        print(f"Git commit выполнен успешно: {commit_message}")
+        
+        # Push
+        subprocess.run(['git', 'push'], check=True, capture_output=True, text=True)
+        print("Git push выполнен успешно.")
+    except subprocess.CalledProcessError as e:
+        print(f"Ошибка при git операциях: {e.stderr}")
+
+# Основная функция (добавлен вызов commit_and_push_changes)
 def main():
     print(f"Script started. Data dir: {data_dir}")
     print(f"Enriched dir: {enriched_dir}")
@@ -270,8 +295,10 @@ def main():
     else:
         print("Нет прогнозов для сохранения.")
     
-    # Создание динамических визуализаций
     create_dynamic_visualizations(df, combined_forecast)
+    
+    # Коммит и пуш изменений
+    commit_and_push_changes()
 
 if __name__ == "__main__":
     main()
