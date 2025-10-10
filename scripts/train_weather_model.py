@@ -109,7 +109,7 @@ def train_and_forecast(df, city, tomorrow_date):
     })
     return forecast_df
 
-# Функция для создания динамических визуализаций (изменено: сохранение в PNG вместо HTML)
+# Функция для создания динамических визуализаций (изменено: сохранение в PNG вместо HTML, и цвета для прогнозов теперь совпадают с историческими)
 def create_dynamic_visualizations(df, forecast_df):
     if df.empty:
         print("Нет данных для визуализаций.")
@@ -139,10 +139,15 @@ def create_dynamic_visualizations(df, forecast_df):
     
     df_combined = df_combined.sort_values('date')
     
+    # Список цветов для консистентности (Plotly qualitative palette)
+    import plotly.colors
+    colors = plotly.colors.qualitative.Plotly  # ['#636EFA', '#EF553B', '#00CC96', '#AB63FA', '#FFA15A', '#19D3F3', '#FF6692', '#B6E880', '#FF97FF', '#FECB52']
+    
     fig1 = go.Figure()
-    for city in df_combined['city'].unique():
+    for i, city in enumerate(df_combined['city'].unique()):
+        color = colors[i % len(colors)]
         city_data = df_combined[(df_combined['city'] == city) & (df_combined['date'] < pd.to_datetime(datetime.now().date()))]
-        fig1.add_trace(go.Scatter(x=city_data['date'], y=city_data['temp_day'], mode='lines+markers', name=f"{city} - Historical Day"))
+        fig1.add_trace(go.Scatter(x=city_data['date'], y=city_data['temp_day'], mode='lines+markers', name=f"{city} - Historical Day", line=dict(color=color)))
     fig1.update_layout(
         title="Historical Day Temperature Over Time by City",
         xaxis_title="Date",
@@ -160,9 +165,10 @@ def create_dynamic_visualizations(df, forecast_df):
     fig1.write_image(os.path.join(visualizations_dir, 'historical_day_temperature.png'))  # Изменено на PNG
     
     fig2 = go.Figure()
-    for city in df_combined['city'].unique():
+    for i, city in enumerate(df_combined['city'].unique()):
+        color = colors[i % len(colors)]
         city_data = df_combined[(df_combined['city'] == city) & (df_combined['date'] < pd.to_datetime(datetime.now().date()))]
-        fig2.add_trace(go.Scatter(x=city_data['date'], y=city_data['temp_night'], mode='lines+markers', name=f"{city} - Historical Night"))
+        fig2.add_trace(go.Scatter(x=city_data['date'], y=city_data['temp_night'], mode='lines+markers', name=f"{city} - Historical Night", line=dict(color=color)))
     fig2.update_layout(
         title="Historical Night Temperature Over Time by City",
         xaxis_title="Date",
@@ -180,11 +186,12 @@ def create_dynamic_visualizations(df, forecast_df):
     fig2.write_image(os.path.join(visualizations_dir, 'historical_night_temperature.png'))  # Изменено на PNG
     
     fig3 = go.Figure()
-    for city in df_combined['city'].unique():
+    for i, city in enumerate(df_combined['city'].unique()):
+        color = colors[i % len(colors)]
         historical = df_combined[(df_combined['city'] == city) & (df_combined['date'] < pd.to_datetime(datetime.now().date()))]
         forecast = df_combined[(df_combined['city'] == city) & (df_combined['date'] >= pd.to_datetime(datetime.now().date()))]
-        fig3.add_trace(go.Scatter(x=historical['date'], y=historical['temp_day'], mode='lines+markers', name=f"{city} - Historical Day"))
-        fig3.add_trace(go.Scatter(x=forecast['date'], y=forecast['temp_day'], mode='markers', marker=dict(color='red', size=10), name=f"{city} - Forecast Day"))
+        fig3.add_trace(go.Scatter(x=historical['date'], y=historical['temp_day'], mode='lines+markers', name=f"{city} - Historical Day", line=dict(color=color)))
+        fig3.add_trace(go.Scatter(x=forecast['date'], y=forecast['temp_day'], mode='markers', marker=dict(color=color, size=10), name=f"{city} - Forecast Day"))
     fig3.update_layout(
         title="Forecasted Day Temperature Over Time by City (with as_of_date)",
         xaxis_title="Date",
@@ -202,11 +209,12 @@ def create_dynamic_visualizations(df, forecast_df):
     fig3.write_image(os.path.join(visualizations_dir, 'forecasted_day_temperature.png'))  # Изменено на PNG
     
     fig4 = go.Figure()
-    for city in df_combined['city'].unique():
+    for i, city in enumerate(df_combined['city'].unique()):
+        color = colors[i % len(colors)]
         historical = df_combined[(df_combined['city'] == city) & (df_combined['date'] < pd.to_datetime(datetime.now().date()))]
         forecast = df_combined[(df_combined['city'] == city) & (df_combined['date'] >= pd.to_datetime(datetime.now().date()))]
-        fig4.add_trace(go.Scatter(x=historical['date'], y=historical['temp_night'], mode='lines+markers', name=f"{city} - Historical Night"))
-        fig4.add_trace(go.Scatter(x=forecast['date'], y=forecast['temp_night'], mode='markers', marker=dict(color='red', size=10), name=f"{city} - Forecast Night"))
+        fig4.add_trace(go.Scatter(x=historical['date'], y=historical['temp_night'], mode='lines+markers', name=f"{city} - Historical Night", line=dict(color=color)))
+        fig4.add_trace(go.Scatter(x=forecast['date'], y=forecast['temp_night'], mode='markers', marker=dict(color=color, size=10), name=f"{city} - Forecast Night"))
     fig4.update_layout(
         title="Forecasted Night Temperature Over Time by City (with as_of_date)",
         xaxis_title="Date",
