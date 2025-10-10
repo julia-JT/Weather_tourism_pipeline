@@ -1,4 +1,4 @@
-name: Data Pipeline
+name: Data Pipeline_main
 
 on:
   schedule:
