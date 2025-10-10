@@ -5,10 +5,12 @@ from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error
 import matplotlib.pyplot as plt
-from matplotlib.dates import DateFormatter  # Добавлено для форматирования дат
+from matplotlib.dates import DateFormatter
 import pickle
+import plotly.graph_objects as go  # Добавлено для динамических графиков
+from plotly.subplots import make_subplots  # Для субплотов, если нужно
 
-# Папки
+# Папки (без изменений)
 data_dir = os.path.join(os.path.dirname(__file__), '..', 'data')
 enriched_dir = os.path.join(data_dir, 'enriched')
 models_dir = os.path.join(data_dir, 'models')
@@ -17,48 +19,37 @@ visualizations_dir = os.path.join(data_dir, 'visualizations')
 os.makedirs(forecasts_dir, exist_ok=True)
 os.makedirs(visualizations_dir, exist_ok=True)
 
-# Функция для загрузки данных
+# Функция для загрузки данных (без изменений)
 def load_data_from_directory(directory):
     all_data = []
     for file in os.listdir(directory):
-        # Фильтр: только файлы weather_enriched_YYYYMMDD.csv, игнорируем cities_references.csv
         if file.startswith('weather_enriched_') and file.endswith('.csv'):
             file_path = os.path.join(directory, file)
             df = pd.read_csv(file_path)
-            # Извлекаем город из поля 'city_name' (предполагаем, что оно всегда есть)
             if 'city_name' in df.columns:
                 df['city'] = df['city_name']
             else:
                 print(f"Предупреждение: В файле {file} нет колонки 'city_name'. Пропускаем файл.")
                 continue
-            # Переименовываем 'collection_time' в 'date' (без проверок, предполагаем наличие)
             df.rename(columns={'collection_time': 'date'}, inplace=True)
             df['date'] = pd.to_datetime(df['date'], format='%d.%m.%Y %H:%M:%S', errors='coerce')
             all_data.append(df)
     if all_data:
         combined_df = pd.concat(all_data, ignore_index=True)
-        # Определяем интервалы: day (11:00-18:00), night (остальное)
         combined_df['hour'] = combined_df['date'].dt.hour
         combined_df['interval'] = combined_df['hour'].apply(lambda h: 'day' if 11 <= h < 18 else 'night')
-        # Агрегируем по городу, дню и интервалу: средняя температура
         combined_df['date_day'] = combined_df['date'].dt.date
         combined_df = combined_df.groupby(['city', 'date_day', 'interval'])['temperature'].mean().reset_index()
-        # Pivot: получаем temp_day и temp_night для каждого дня
         combined_df = combined_df.pivot(index=['city', 'date_day'], columns='interval', values='temperature').reset_index()
         combined_df.rename(columns={'day': 'temp_day', 'night': 'temp_night'}, inplace=True)
         combined_df['date'] = pd.to_datetime(combined_df['date_day'])
         combined_df.drop('date_day', axis=1, inplace=True)
-        # Заполняем NaN (если интервал отсутствует) средними значениями
         combined_df['temp_day'] = combined_df['temp_day'].fillna(combined_df['temp_day'].mean())
         combined_df['temp_night'] = combined_df['temp_night'].fillna(combined_df['temp_night'].mean())
         return combined_df
     return pd.DataFrame()
 
-# Функция для вычисления comfort index (опционально, если есть humidity)
-def calculate_comfort_index(temp, humidity):
-    return temp - (humidity / 10)
-
-# Функция для обучения модели и прогноза
+# Функция для обучения модели и прогноза (без изменений)
 def train_and_forecast(df, city, tomorrow_date):
     if df.empty:
         print(f"Нет данных для города {city}")
@@ -83,24 +74,20 @@ def train_and_forecast(df, city, tomorrow_date):
         print(f"Недостаточно данных для модели в городе {city}")
         return pd.DataFrame()
     
-    # Обучаем модель для temp_day
     y_day = df_city['temp_day']
     X_train_day, X_test_day, y_train_day, y_test_day = train_test_split(X, y_day, test_size=0.2, random_state=42)
     model_day = LinearRegression()
     model_day.fit(X_train_day, y_train_day)
     
-    # Обучаем модель для temp_night
     y_night = df_city['temp_night']
     X_train_night, X_test_night, y_train_night, y_test_night = train_test_split(X, y_night, test_size=0.2, random_state=42)
     model_night = LinearRegression()
     model_night.fit(X_train_night, y_train_night)
     
-    # Прогноз на завтра (исправлено: передаём DataFrame с именами колонок для совместимости с sklearn)
     tomorrow_day = pd.to_datetime(tomorrow_date).dayofyear
     predicted_day = model_day.predict(pd.DataFrame([[tomorrow_day]], columns=['day_of_year']))[0]
     predicted_night = model_night.predict(pd.DataFrame([[tomorrow_day]], columns=['day_of_year']))[0]
     
-    # Сохранение моделей (с try-except для отладки)
     try:
         model_path_day = os.path.join(models_dir, f'{city}_model_day.pkl')
         model_path_night = os.path.join(models_dir, f'{city}_model_night.pkl')
@@ -112,18 +99,17 @@ def train_and_forecast(df, city, tomorrow_date):
     except Exception as e:
         print(f"Ошибка сохранения моделей для {city}: {e}")
     
-    # Возврат прогноза как DataFrame
     forecast_df = pd.DataFrame({
         'city': [city],
         'forecast_date': [tomorrow_date],
-        'predicted_temp_day': [round(predicted_day)],  # Округление до целого
-        'predicted_temp_night': [round(predicted_night)],  # Округление до целого
+        'predicted_temp_day': [round(predicted_day)],
+        'predicted_temp_night': [round(predicted_night)],
         'model_type': ['LinearRegression']
     })
     return forecast_df
 
-# Функция для создания визуализаций
-def create_visualizations(df):
+# Новая функция для создания динамических визуализаций с Plotly
+def create_dynamic_visualizations(df, forecast_df):
     if df.empty:
         print("Нет данных для визуализаций.")
         return
@@ -132,41 +118,121 @@ def create_visualizations(df):
         print("Колонка 'date' отсутствует для визуализаций.")
         return
     
-    # Диагностика: проверьте уникальные даты в df (для отладки)
+    # Диагностика (без изменений)
     print(f"Уникальные даты в enriched данных: {sorted(df['date'].unique())}")
     print(f"Диапазон дат: от {df['date'].min()} до {df['date'].max()}")
+    if not forecast_df.empty:
+        print(f"Прогноз на дату: {forecast_df['forecast_date'].iloc[0]}")
     
-    # Визуализация дневной температуры по городам
-    plt.figure(figsize=(10, 6))
-    for city in df['city'].unique():
-        city_data = df[df['city'] == city]
-        plt.plot(city_data['date'], city_data['temp_day'], label=f"{city} - Day")
-    plt.title('Predicted day Temperature Over Time by City')
-    plt.xlabel('Date (DD_MM)')
-    plt.ylabel('Day Temperature (°C)')
-    plt.gca().xaxis.set_major_formatter(DateFormatter('%d_%m'))  # Формат DD_MM
-    plt.xticks(rotation=45)
-    plt.legend()
-    plt.savefig(os.path.join(visualizations_dir, 'temperature_day.png'))
-    plt.close()
+    # Объединяем исторические данные и прогноз для визуализаций (без изменений)
+    df_combined = df.copy()
+    if not forecast_df.empty:
+        forecast_rows = forecast_df[['city', 'forecast_date', 'predicted_temp_day', 'predicted_temp_night']].rename(
+            columns={'forecast_date': 'date', 'predicted_temp_day': 'temp_day', 'predicted_temp_night': 'temp_night'}
+        )
+        forecast_rows['date'] = pd.to_datetime(forecast_rows['date'])
+        df_combined = pd.concat([df_combined, forecast_rows], ignore_index=True)
     
-    # Визуализация ночной температуры по городам
-    plt.figure(figsize=(10, 6))
-    for city in df['city'].unique():
-        city_data = df[df['city'] == city]
-        plt.plot(city_data['date'], city_data['temp_night'], label=f"{city} - Night")
-    plt.title('Predicted night Temperature Over Time by City')
-    plt.xlabel('Date (DD_MM)')
-    plt.ylabel('Night Temperature (°C)')
-    plt.gca().xaxis.set_major_formatter(DateFormatter('%d_%m'))  # Формат DD_MM
-    plt.xticks(rotation=45)
-    plt.legend()
-    plt.savefig(os.path.join(visualizations_dir, 'temperature_night.png'))
-    plt.close()
+    # Добавляем as_of_date к df_combined (если есть в forecast_df)
+    if 'as_of_date' in forecast_df.columns:
+        df_combined['as_of_date'] = forecast_df['as_of_date'].iloc[0] if not forecast_df.empty else None
+    else:
+        df_combined['as_of_date'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')  # Фallback
     
-    print("Визуализации сохранены в data/visualizations/")
+    # Сортируем по дате
+    df_combined = df_combined.sort_values('date')
+    
+    # График 1: Реальные дневные температуры (интерактивный с фильтром по городу)
+    fig1 = go.Figure()
+    for city in df_combined['city'].unique():
+        city_data = df_combined[(df_combined['city'] == city) & (df_combined['date'] < pd.to_datetime(datetime.now().date()))]  # Только исторические
+        fig1.add_trace(go.Scatter(x=city_data['date'], y=city_data['temp_day'], mode='lines+markers', name=f"{city} - Historical Day"))
+    fig1.update_layout(
+        title="Historical Day Temperature Over Time by City",
+        xaxis_title="Date",
+        yaxis_title="Day Temperature (°C)",
+        updatemenus=[
+            dict(
+                type="dropdown",
+                buttons=[
+                    dict(label=city, method="update", args=[{"visible": [c == city for c in df_combined['city'].unique()]}, {"title": f"Historical Day Temperature - {city}"}])
+                    for city in df_combined['city'].unique()
+                ]
+            )
+        ]
+    )
+    fig1.write_html(os.path.join(visualizations_dir, 'historical_day_temperature.html'))
+    
+    # График 2: Реальные ночные температуры (аналогично)
+    fig2 = go.Figure()
+    for city in df_combined['city'].unique():
+        city_data = df_combined[(df_combined['city'] == city) & (df_combined['date'] < pd.to_datetime(datetime.now().date()))]
+        fig2.add_trace(go.Scatter(x=city_data['date'], y=city_data['temp_night'], mode='lines+markers', name=f"{city} - Historical Night"))
+    fig2.update_layout(
+        title="Historical Night Temperature Over Time by City",
+        xaxis_title="Date",
+        yaxis_title="Night Temperature (°C)",
+        updatemenus=[
+            dict(
+                type="dropdown",
+                buttons=[
+                    dict(label=city, method="update", args=[{"visible": [c == city for c in df_combined['city'].unique()]}, {"title": f"Historical Night Temperature - {city}"}])
+                    for city in df_combined['city'].unique()
+                ]
+            )
+        ]
+    )
+    fig2.write_html(os.path.join(visualizations_dir, 'historical_night_temperature.html'))
+    
+    # График 3: Предсказанные дневные температуры (включая прогноз, с фильтром по as_of_date и городу)
+    fig3 = go.Figure()
+    for city in df_combined['city'].unique():
+        historical = df_combined[(df_combined['city'] == city) & (df_combined['date'] < pd.to_datetime(datetime.now().date()))]
+        forecast = df_combined[(df_combined['city'] == city) & (df_combined['date'] >= pd.to_datetime(datetime.now().date()))]
+        fig3.add_trace(go.Scatter(x=historical['date'], y=historical['temp_day'], mode='lines+markers', name=f"{city} - Historical Day"))
+        fig3.add_trace(go.Scatter(x=forecast['date'], y=forecast['temp_day'], mode='markers', marker=dict(color='red', size=10), name=f"{city} - Forecast Day"))
+    fig3.update_layout(
+        title="Forecasted Day Temperature Over Time by City (with as_of_date)",
+        xaxis_title="Date",
+        yaxis_title="Day Temperature (°C)",
+        updatemenus=[
+            dict(
+                type="dropdown",
+                buttons=[
+                    dict(label=city, method="update", args=[{"visible": [c == city for c in df_combined['city'].unique()] * 2}, {"title": f"Forecasted Day Temperature - {city}"}])
+                    for city in df_combined['city'].unique()
+                ]
+            )
+        ]
+    )
+    fig3.write_html(os.path.join(visualizations_dir, 'forecasted_day_temperature.html'))
+    
+    # График 4: Предсказанные ночные температуры (аналогично)
+    fig4 = go.Figure()
+    for city in df_combined['city'].unique():
+        historical = df_combined[(df_combined['city'] == city) & (df_combined['date'] < pd.to_datetime(datetime.now().date()))]
+        forecast = df_combined[(df_combined['city'] == city) & (df_combined['date'] >= pd.to_datetime(datetime.now().date()))]
+        fig4.add_trace(go.Scatter(x=historical['date'], y=historical['temp_night'], mode='lines+markers', name=f"{city} - Historical Night"))
+        fig4.add_trace(go.Scatter(x=forecast['date'], y=forecast['temp_night'], mode='markers', marker=dict(color='red', size=10), name=f"{city} - Forecast Night"))
+    fig4.update_layout(
+        title="Forecasted Night Temperature Over Time by City (with as_of_date)",
+        xaxis_title="Date",
+        yaxis_title="Night Temperature (°C)",
+        updatemenus=[
+            dict(
+                type="dropdown",
+                buttons=[
+                    dict(label=city, method="update", args=[{"visible": [c == city for c in df_combined['city'].unique()] * 2}, {"title": f"Forecasted Night Temperature - {city}"}])
+                    for city in df_combined['city'].unique()
+                ]
+            )
+        ]
+    )
+    fig4.write_html(os.path.join(visualizations_dir, 'forecasted_night_temperature.html'))
+    
+    print("Динамические визуализации сохранены в data/visualizations/ как HTML-файлы (откройте в браузере для интерактивности)")
 
-# Основная функция
+# Основная функция (обновлено: вызов новой функции визуализаций)
 def main():
     print(f"Script started. Data dir: {data_dir}")
     print(f"Enriched dir: {enriched_dir}")
@@ -191,20 +257,21 @@ def main():
             forecast_df['as_of_date'] = as_of_date
             all_forecasts.append(forecast_df)
     
+    combined_forecast = pd.DataFrame()
     if all_forecasts:
         combined_forecast = pd.concat(all_forecasts, ignore_index=True)
         forecast_file = os.path.join(forecasts_dir, 'Forecast.csv')
         try:
             file_exists = os.path.exists(forecast_file)
-            combined_forecast.to_csv(forecast_file, mode='w', header=True, index=False)  # Перезапись файла
+            combined_forecast.to_csv(forecast_file, mode='w', header=True, index=False)
             print(f"Прогнозы сохранены в {forecast_file} с as_of_date {as_of_date}")
         except Exception as e:
             print(f"Ошибка сохранения прогнозов: {e}")
     else:
         print("Нет прогнозов для сохранения.")
     
-    # Создание визуализаций на основе всех данных
-    create_visualizations(df)
+    # Создание динамических визуализаций
+    create_dynamic_visualizations(df, combined_forecast)
 
 if __name__ == "__main__":
     main()
