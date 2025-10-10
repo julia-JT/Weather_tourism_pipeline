@@ -141,7 +141,7 @@ def create_visualizations(df):
     for city in df['city'].unique():
         city_data = df[df['city'] == city]
         plt.plot(city_data['date'], city_data['temp_day'], label=f"{city} - Day")
-    plt.title('Day Temperature Over Time by City')
+    plt.title('Predicted day Temperature Over Time by City')
     plt.xlabel('Date (DD_MM)')
     plt.ylabel('Day Temperature (°C)')
     plt.gca().xaxis.set_major_formatter(DateFormatter('%d_%m'))  # Формат DD_MM
@@ -155,7 +155,7 @@ def create_visualizations(df):
     for city in df['city'].unique():
         city_data = df[df['city'] == city]
         plt.plot(city_data['date'], city_data['temp_night'], label=f"{city} - Night")
-    plt.title('Night Temperature Over Time by City')
+    plt.title('Predicted night Temperature Over Time by City')
     plt.xlabel('Date (DD_MM)')
     plt.ylabel('Night Temperature (°C)')
     plt.gca().xaxis.set_major_formatter(DateFormatter('%d_%m'))  # Формат DD_MM
