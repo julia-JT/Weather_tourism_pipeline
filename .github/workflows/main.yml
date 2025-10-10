@@ -366,13 +366,21 @@ jobs:
       if: steps.update_readme.outputs.ready == 'true'
       run: |
         git fetch origin
-          if git pull --rebase origin/${{ github.ref_name }}; then
-            echo "Rebase successful"
-          else
-            echo "Rebase failed, aborting"
-            git rebase --abort
-            exit 1
+        git pull --rebase origin/${{ github.ref_name }}
+
+        git add .  # Добавляет все изменения (модели, визуализации, README и т.д.)
+        git status  # Покажет, что добавлено
+        if ! git diff --staged --quiet; then
+          git commit -m "Update forecasts, visualizations, and README"
+          # Убираем --force-with-lease, чтобы избежать перезаписи; используем обычный push
+          git push https://${{ github.actor }}:${{ secrets.REPO_ACCESS_TOKEN }}@github.com/${{ github.repository }}.git ${{ github.ref_name }}
+          echo "Changes committed and pushed."
+        else
+          echo "No changes to commit."
         fi
+    - name: Commit push ready
+      if: steps.commit_push.outcome == 'success'
+      run: echo "ready=true" >> $GITHUB_OUTPUTломать код, раньше все работало:
     - name: Commit push ready
       if: steps.commit_push.outcome == 'success'
       run: echo "ready=true" >> $GITHUB_OUTPUT
