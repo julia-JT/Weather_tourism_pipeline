@@ -7,4 +7,5 @@ prophet
 scikit-learn
 tabulate
 plotly
+kaleido
 # Добавьте другие, если знаете (например, из ошибок импорта в коде)
