@@ -52,9 +52,9 @@ def load_forecast_data():
 def generate_markdown(data, forecast_df):
     md = "### Данные о погоде\n\n"
     
-    # Динамическое сканирование и добавление графиков (расширен для HTML из train_weather_model.py)
+    # Динамическое сканирование и добавление графиков (теперь только PNG, так как HTML больше не генерируются)
     md += "#### Графики\n"
-    graph_extensions = ['*.png', '*.jpg', '*.jpeg', '*.html']  # Добавлен *.html для Plotly визуализаций
+    graph_extensions = ['*.png', '*.jpg', '*.jpeg']  # Убрал *.html, поскольку визуализации теперь PNG
     graph_files = []
     for ext in graph_extensions:
         graph_files.extend(glob.glob(os.path.join(visualizations_dir, ext)))
@@ -62,13 +62,9 @@ def generate_markdown(data, forecast_df):
     if graph_files:
         for graph_file in sorted(graph_files):  # Сортировка для предсказуемости
             graph_name = os.path.basename(graph_file)
-            display_name = graph_name.replace('_', ' ').replace('.png', '').replace('.jpg', '').replace('.jpeg', '').replace('.html', '').title()
-            if graph_name.endswith('.html'):
-                # Для HTML (Plotly) добавляем ссылку, так как GitHub не рендерит интерактивный HTML
-                md += f"[{display_name}](data/visualizations/{graph_name})\n\n"
-            else:
-                # Для изображений добавляем как картинку
-                md += f"![{display_name}](data/visualizations/{graph_name})\n\n"
+            display_name = graph_name.replace('_', ' ').replace('.png', '').replace('.jpg', '').replace('.jpeg', '').title()
+            # Все графики теперь изображения, добавляем как картинки
+            md += f"![{display_name}](data/visualizations/{graph_name})\n\n"
     else:
         md += "Нет доступных визуализаций.\n\n"
     
