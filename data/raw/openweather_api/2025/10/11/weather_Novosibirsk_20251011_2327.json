@@ -1,0 +1,47 @@
+{
+    "coord": {
+        "lon": 82.9344,
+        "lat": 55.0411
+    },
+    "weather": [
+        {
+            "id": 800,
+            "main": "Clear",
+            "description": "ясно",
+            "icon": "01n"
+        }
+    ],
+    "base": "stations",
+    "main": {
+        "temp": -9.01,
+        "feels_like": -15.23,
+        "temp_min": -9.01,
+        "temp_max": -9.01,
+        "pressure": 1030,
+        "humidity": 89,
+        "sea_level": 1030,
+        "grnd_level": 1008
+    },
+    "visibility": 10000,
+    "wind": {
+        "speed": 3.87,
+        "deg": 28,
+        "gust": 11.67
+    },
+    "clouds": {
+        "all": 8
+    },
+    "dt": 1760225270,
+    "sys": {
+        "country": "RU",
+        "sunrise": 1760230282,
+        "sunset": 1760269073
+    },
+    "timezone": 25200,
+    "id": 1496747,
+    "name": "Новосибирск",
+    "cod": 200,
+    "city": "Novosibirsk",
+    "timestamp": "2025-10-11T23:27:50.071409",
+    "source": "openweathermap.org"
+}
