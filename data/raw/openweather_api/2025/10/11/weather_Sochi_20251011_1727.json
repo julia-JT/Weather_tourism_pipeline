@@ -1,0 +1,50 @@
+{
+    "coord": {
+        "lon": 39.7303,
+        "lat": 43.6
+    },
+    "weather": [
+        {
+            "id": 500,
+            "main": "Rain",
+            "description": "небольшой дождь",
+            "icon": "10n"
+        }
+    ],
+    "base": "stations",
+    "main": {
+        "temp": 15.03,
+        "feels_like": 14.81,
+        "temp_min": 15.03,
+        "temp_max": 15.03,
+        "pressure": 1015,
+        "humidity": 85,
+        "sea_level": 1015,
+        "grnd_level": 999
+    },
+    "visibility": 10000,
+    "wind": {
+        "speed": 4.62,
+        "deg": 117,
+        "gust": 6.04
+    },
+    "rain": {
+        "1h": 0.11
+    },
+    "clouds": {
+        "all": 66
+    },
+    "dt": 1760203675,
+    "sys": {
+        "country": "RU",
+        "sunrise": 1760153403,
+        "sunset": 1760193917
+    },
+    "timezone": 10800,
+    "id": 491422,
+    "name": "Сочи",
+    "cod": 200,
+    "city": "Sochi",
+    "timestamp": "2025-10-11T17:27:54.588362",
+    "source": "openweathermap.org"
+}
