@@ -109,7 +109,7 @@ def train_and_forecast(df, city, tomorrow_date):
     })
     return forecast_df
 
-# Функция для создания динамических визуализаций (изменено: сохранение в PNG вместо HTML, и цвета для прогнозов теперь совпадают с историческими)
+# Функция для создания динамических визуализаций (изменено: формат дат DD.MM.YY на оси X для всех графиков)
 def create_dynamic_visualizations(df, forecast_df):
     if df.empty:
         print("Нет данных для визуализаций.")
@@ -152,6 +152,7 @@ def create_dynamic_visualizations(df, forecast_df):
         title="Historical Day Temperature Over Time by City",
         xaxis_title="Date",
         yaxis_title="Day Temperature (°C)",
+        xaxis=dict(tickformat='%d.%m.%y'),  # Изменено: формат дат DD.MM.YY
         updatemenus=[
             dict(
                 type="dropdown",
@@ -173,6 +174,7 @@ def create_dynamic_visualizations(df, forecast_df):
         title="Historical Night Temperature Over Time by City",
         xaxis_title="Date",
         yaxis_title="Night Temperature (°C)",
+        xaxis=dict(tickformat='%d.%m.%y'),  # Изменено: формат дат DD.MM.YY
         updatemenus=[
             dict(
                 type="dropdown",
@@ -196,6 +198,7 @@ def create_dynamic_visualizations(df, forecast_df):
         title="Forecasted Day Temperature Over Time by City (with as_of_date)",
         xaxis_title="Date",
         yaxis_title="Day Temperature (°C)",
+        xaxis=dict(tickformat='%d.%m.%y'),  # Изменено: формат дат DD.MM.YY
         updatemenus=[
             dict(
                 type="dropdown",
@@ -219,6 +222,7 @@ def create_dynamic_visualizations(df, forecast_df):
         title="Forecasted Night Temperature Over Time by City (with as_of_date)",
         xaxis_title="Date",
         yaxis_title="Night Temperature (°C)",
+        xaxis=dict(tickformat='%d.%m.%y'),  # Изменено: формат дат DD.MM.YY
         updatemenus=[
             dict(
                 type="dropdown",
