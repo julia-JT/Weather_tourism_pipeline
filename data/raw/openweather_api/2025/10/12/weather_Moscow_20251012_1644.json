@@ -1,0 +1,49 @@
+{
+    "coord": {
+        "lon": 37.6156,
+        "lat": 55.7522
+    },
+    "weather": [
+        {
+            "id": 804,
+            "main": "Clouds",
+            "description": "пасмурно",
+            "icon": "04n"
+        }
+    ],
+    "base": "stations",
+    "main": {
+        "temp": 7.01,
+        "feels_like": 4.75,
+        "temp_min": 6.24,
+        "temp_max": 7.99,
+        "pressure": 1003,
+        "humidity": 64,
+        "sea_level": 1003,
+        "grnd_level": 984
+    },
+    "visibility": 10000,
+    "wind": {
+        "speed": 3.26,
+        "deg": 174,
+        "gust": 5.77
+    },
+    "clouds": {
+        "all": 100
+    },
+    "dt": 1760287315,
+    "sys": {
+        "type": 2,
+        "id": 2094500,
+        "country": "RU",
+        "sunrise": 1760241236,
+        "sunset": 1760279868
+    },
+    "timezone": 10800,
+    "id": 524901,
+    "name": "Москва",
+    "cod": 200,
+    "city": "Moscow",
+    "timestamp": "2025-10-12T16:44:50.419350",
+    "source": "openweathermap.org"
+}
