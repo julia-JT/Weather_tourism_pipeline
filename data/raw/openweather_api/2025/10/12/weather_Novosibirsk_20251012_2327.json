@@ -1,0 +1,48 @@
+{
+    "coord": {
+        "lon": 82.9344,
+        "lat": 55.0411
+    },
+    "weather": [
+        {
+            "id": 600,
+            "main": "Snow",
+            "description": "небольшой снег",
+            "icon": "13n"
+        }
+    ],
+    "base": "stations",
+    "main": {
+        "temp": -5.39,
+        "feels_like": -8.73,
+        "temp_min": -5.39,
+        "temp_max": -5.39,
+        "pressure": 1031,
+        "humidity": 68,
+        "sea_level": 1031,
+        "grnd_level": 1009
+    },
+    "visibility": 10000,
+    "wind": {
+        "speed": 2,
+        "deg": 30
+    },
+    "clouds": {
+        "all": 100
+    },
+    "dt": 1760311371,
+    "sys": {
+        "type": 1,
+        "id": 8958,
+        "country": "RU",
+        "sunrise": 1760316799,
+        "sunset": 1760355326
+    },
+    "timezone": 25200,
+    "id": 1496747,
+    "name": "Новосибирск",
+    "cod": 200,
+    "city": "Novosibirsk",
+    "timestamp": "2025-10-12T23:27:21.316542",
+    "source": "openweathermap.org"
+}
