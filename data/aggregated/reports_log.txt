@@ -893,3 +893,10 @@
 Витрина 1: Рейтинг городов (city_tourism_rating.csv) - сортировка по avg_comfort_index
 Витрина 2: Сводка по округам (federal_districts_summary.csv) - средняя temp по всем городам, комфортные города (comfort > 15 и не домашний отдых), рекомендация
 Витрина 3: Рекомендации (travel_recommendations.csv) - топ-3, дома, дополнительные заметки
+
+--- Новый запуск: 2025-10-14 14:48 ---
+Обработано файлов: 7 (weather_enriched_20251014.csv, weather_enriched_20251011.csv, weather_enriched_20251009.csv, weather_enriched_20251012.csv, weather_enriched_20251013.csv, weather_enriched_20251010.csv, weather_enriched_20251008.csv)
+Всего строк данных: 600
+Витрина 1: Рейтинг городов (city_tourism_rating.csv) - сортировка по avg_comfort_index
+Витрина 2: Сводка по округам (federal_districts_summary.csv) - средняя temp по всем городам, комфортные города (comfort > 15 и не домашний отдых), рекомендация
+Витрина 3: Рекомендации (travel_recommendations.csv) - топ-3, дома, дополнительные заметки
