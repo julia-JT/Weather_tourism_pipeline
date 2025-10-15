@@ -1,0 +1,52 @@
+{
+    "coord": {
+        "lon": 37.6156,
+        "lat": 55.7522
+    },
+    "weather": [
+        {
+            "id": 500,
+            "main": "Rain",
+            "description": "небольшой дождь",
+            "icon": "10n"
+        }
+    ],
+    "base": "stations",
+    "main": {
+        "temp": 4.98,
+        "feels_like": 3.15,
+        "temp_min": 3.24,
+        "temp_max": 5.37,
+        "pressure": 1015,
+        "humidity": 71,
+        "sea_level": 1015,
+        "grnd_level": 995
+    },
+    "visibility": 10000,
+    "wind": {
+        "speed": 2.2,
+        "deg": 327,
+        "gust": 4.08
+    },
+    "rain": {
+        "1h": 0.11
+    },
+    "clouds": {
+        "all": 97
+    },
+    "dt": 1760549693,
+    "sys": {
+        "type": 2,
+        "id": 2094500,
+        "country": "RU",
+        "sunrise": 1760500801,
+        "sunset": 1760538617
+    },
+    "timezone": 10800,
+    "id": 524901,
+    "name": "Москва",
+    "cod": 200,
+    "city": "Moscow",
+    "timestamp": "2025-10-15T17:38:44.148463",
+    "source": "openweathermap.org"
+}
