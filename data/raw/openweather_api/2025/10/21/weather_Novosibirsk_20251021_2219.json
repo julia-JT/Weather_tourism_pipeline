@@ -1,0 +1,48 @@
+{
+    "coord": {
+        "lon": 82.9344,
+        "lat": 55.0411
+    },
+    "weather": [
+        {
+            "id": 741,
+            "main": "Fog",
+            "description": "плотный туман",
+            "icon": "50n"
+        }
+    ],
+    "base": "stations",
+    "main": {
+        "temp": -1.39,
+        "feels_like": -4.07,
+        "temp_min": -1.39,
+        "temp_max": -1.39,
+        "pressure": 1036,
+        "humidity": 100,
+        "sea_level": 1036,
+        "grnd_level": 1015
+    },
+    "visibility": 6000,
+    "wind": {
+        "speed": 2,
+        "deg": 320
+    },
+    "clouds": {
+        "all": 100
+    },
+    "dt": 1761085198,
+    "sys": {
+        "type": 1,
+        "id": 8958,
+        "country": "RU",
+        "sunrise": 1761095473,
+        "sunset": 1761131639
+    },
+    "timezone": 25200,
+    "id": 1496747,
+    "name": "Новосибирск",
+    "cod": 200,
+    "city": "Novosibirsk",
+    "timestamp": "2025-10-21T22:19:55.795584",
+    "source": "openweathermap.org"
+}
