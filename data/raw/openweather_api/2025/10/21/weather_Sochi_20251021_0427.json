@@ -1,0 +1,49 @@
+{
+    "coord": {
+        "lon": 39.7303,
+        "lat": 43.6
+    },
+    "weather": [
+        {
+            "id": 803,
+            "main": "Clouds",
+            "description": "облачно с прояснениями",
+            "icon": "04d"
+        }
+    ],
+    "base": "stations",
+    "main": {
+        "temp": 9.05,
+        "feels_like": 6.97,
+        "temp_min": 9.05,
+        "temp_max": 9.05,
+        "pressure": 1019,
+        "humidity": 73,
+        "sea_level": 1019,
+        "grnd_level": 1004
+    },
+    "visibility": 10000,
+    "wind": {
+        "speed": 3.73,
+        "deg": 59,
+        "gust": 2.3
+    },
+    "clouds": {
+        "all": 73
+    },
+    "dt": 1761020871,
+    "sys": {
+        "type": 1,
+        "id": 8972,
+        "country": "RU",
+        "sunrise": 1761018141,
+        "sunset": 1761056925
+    },
+    "timezone": 10800,
+    "id": 491422,
+    "name": "Сочи",
+    "cod": 200,
+    "city": "Sochi",
+    "timestamp": "2025-10-21T04:27:51.333536",
+    "source": "openweathermap.org"
+}
