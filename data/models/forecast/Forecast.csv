@@ -1,6 +1,6 @@
 city,forecast_date,predicted_temp_day,predicted_temp_night,model_type,as_of_date
-Казань,2025-10-22,5,4,LinearRegression,2025-10-21 17:21:00
-Москва,2025-10-22,3,3,LinearRegression,2025-10-21 17:21:00
-Новосибирск,2025-10-22,1,1,LinearRegression,2025-10-21 17:21:00
-Санкт-Петербург,2025-10-22,5,3,LinearRegression,2025-10-21 17:21:00
-Сочи,2025-10-22,13,11,LinearRegression,2025-10-21 17:21:00
+Казань,2025-10-22,5,4,LinearRegression,2025-10-21 18:33:49
+Москва,2025-10-22,3,3,LinearRegression,2025-10-21 18:33:49
+Новосибирск,2025-10-22,1,1,LinearRegression,2025-10-21 18:33:49
+Санкт-Петербург,2025-10-22,5,3,LinearRegression,2025-10-21 18:33:49
+Сочи,2025-10-22,13,11,LinearRegression,2025-10-21 18:33:49
