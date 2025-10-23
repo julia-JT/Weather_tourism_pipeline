@@ -1,0 +1,48 @@
+{
+    "coord": {
+        "lon": 30.2642,
+        "lat": 59.8944
+    },
+    "weather": [
+        {
+            "id": 803,
+            "main": "Clouds",
+            "description": "облачно с прояснениями",
+            "icon": "04n"
+        }
+    ],
+    "base": "stations",
+    "main": {
+        "temp": 6.7,
+        "feels_like": 3.95,
+        "temp_min": 6.7,
+        "temp_max": 7.08,
+        "pressure": 1004,
+        "humidity": 79,
+        "sea_level": 1004,
+        "grnd_level": 1004
+    },
+    "visibility": 10000,
+    "wind": {
+        "speed": 4,
+        "deg": 140
+    },
+    "clouds": {
+        "all": 75
+    },
+    "dt": 1761239861,
+    "sys": {
+        "type": 2,
+        "id": 2045711,
+        "country": "RU",
+        "sunrise": 1761195456,
+        "sunset": 1761229718
+    },
+    "timezone": 10800,
+    "id": 498817,
+    "name": "Санкт-Петербург",
+    "cod": 200,
+    "city": "Saint Petersburg",
+    "timestamp": "2025-10-23T17:20:43.548814",
+    "source": "openweathermap.org"
+}
