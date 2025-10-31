@@ -1,0 +1,49 @@
+{
+    "coord": {
+        "lon": 49.1221,
+        "lat": 55.7887
+    },
+    "weather": [
+        {
+            "id": 801,
+            "main": "Clouds",
+            "description": "небольшая облачность",
+            "icon": "02n"
+        }
+    ],
+    "base": "stations",
+    "main": {
+        "temp": 5.34,
+        "feels_like": 5.34,
+        "temp_min": 5.34,
+        "temp_max": 5.34,
+        "pressure": 1016,
+        "humidity": 78,
+        "sea_level": 1016,
+        "grnd_level": 1002
+    },
+    "visibility": 10000,
+    "wind": {
+        "speed": 1.11,
+        "deg": 157,
+        "gust": 1.05
+    },
+    "clouds": {
+        "all": 11
+    },
+    "dt": 1761920534,
+    "sys": {
+        "type": 1,
+        "id": 9038,
+        "country": "RU",
+        "sunrise": 1761882442,
+        "sunset": 1761916004
+    },
+    "timezone": 10800,
+    "id": 551487,
+    "name": "Казань",
+    "cod": 200,
+    "city": "Kazan",
+    "timestamp": "2025-10-31T14:24:35.258997",
+    "source": "openweathermap.org"
+}
