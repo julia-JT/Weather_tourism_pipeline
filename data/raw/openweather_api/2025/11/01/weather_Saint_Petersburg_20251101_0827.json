@@ -1,0 +1,48 @@
+{
+    "coord": {
+        "lon": 30.2642,
+        "lat": 59.8944
+    },
+    "weather": [
+        {
+            "id": 300,
+            "main": "Drizzle",
+            "description": "небольшая морось",
+            "icon": "09d"
+        }
+    ],
+    "base": "stations",
+    "main": {
+        "temp": 6.14,
+        "feels_like": 6.14,
+        "temp_min": 6.08,
+        "temp_max": 6.14,
+        "pressure": 1015,
+        "humidity": 94,
+        "sea_level": 1015,
+        "grnd_level": 1015
+    },
+    "visibility": 3100,
+    "wind": {
+        "speed": 1,
+        "deg": 0
+    },
+    "clouds": {
+        "all": 100
+    },
+    "dt": 1761985669,
+    "sys": {
+        "type": 2,
+        "id": 2045711,
+        "country": "RU",
+        "sunrise": 1761974429,
+        "sunset": 1762005866
+    },
+    "timezone": 10800,
+    "id": 498817,
+    "name": "Санкт-Петербург",
+    "cod": 200,
+    "city": "Saint Petersburg",
+    "timestamp": "2025-11-01T08:27:49.507543",
+    "source": "openweathermap.org"
+}
