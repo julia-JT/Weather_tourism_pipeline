@@ -1,0 +1,49 @@
+{
+    "coord": {
+        "lon": 39.7303,
+        "lat": 43.6
+    },
+    "weather": [
+        {
+            "id": 800,
+            "main": "Clear",
+            "description": "ясно",
+            "icon": "01n"
+        }
+    ],
+    "base": "stations",
+    "main": {
+        "temp": 14.05,
+        "feels_like": 13.86,
+        "temp_min": 14.05,
+        "temp_max": 14.05,
+        "pressure": 1024,
+        "humidity": 90,
+        "sea_level": 1024,
+        "grnd_level": 1008
+    },
+    "visibility": 10000,
+    "wind": {
+        "speed": 2.23,
+        "deg": 80,
+        "gust": 2.16
+    },
+    "clouds": {
+        "all": 1
+    },
+    "dt": 1762014181,
+    "sys": {
+        "type": 1,
+        "id": 8972,
+        "country": "RU",
+        "sunrise": 1761969392,
+        "sunset": 1762006360
+    },
+    "timezone": 10800,
+    "id": 491422,
+    "name": "Сочи",
+    "cod": 200,
+    "city": "Sochi",
+    "timestamp": "2025-11-01T16:25:45.916196",
+    "source": "openweathermap.org"
+}
