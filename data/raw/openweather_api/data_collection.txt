@@ -3333,3 +3333,8 @@
 [2025-11-07 10:26:23] SUCCESS: Данные для Sochi сохранены в /home/runner/work/Weather_tourism_pipeline/Weather_tourism_pipeline/scripts/../data/raw/openweather_api/2025/11/07/weather_Sochi_20251107_1026.json
 [2025-11-07 10:26:23] SUCCESS: Данные для Kazan сохранены в /home/runner/work/Weather_tourism_pipeline/Weather_tourism_pipeline/scripts/../data/raw/openweather_api/2025/11/07/weather_Kazan_20251107_1026.json
 [2025-11-07 10:26:23] SUCCESS: Данные для Novosibirsk сохранены в /home/runner/work/Weather_tourism_pipeline/Weather_tourism_pipeline/scripts/../data/raw/openweather_api/2025/11/07/weather_Novosibirsk_20251107_1026.json
+[2025-11-07 11:20:08] SUCCESS: Данные для Moscow сохранены в /home/runner/work/Weather_tourism_pipeline/Weather_tourism_pipeline/scripts/../data/raw/openweather_api/2025/11/07/weather_Moscow_20251107_1120.json
+[2025-11-07 11:20:08] SUCCESS: Данные для Saint Petersburg сохранены в /home/runner/work/Weather_tourism_pipeline/Weather_tourism_pipeline/scripts/../data/raw/openweather_api/2025/11/07/weather_Saint_Petersburg_20251107_1120.json
+[2025-11-07 11:20:09] SUCCESS: Данные для Sochi сохранены в /home/runner/work/Weather_tourism_pipeline/Weather_tourism_pipeline/scripts/../data/raw/openweather_api/2025/11/07/weather_Sochi_20251107_1120.json
+[2025-11-07 11:20:09] SUCCESS: Данные для Kazan сохранены в /home/runner/work/Weather_tourism_pipeline/Weather_tourism_pipeline/scripts/../data/raw/openweather_api/2025/11/07/weather_Kazan_20251107_1120.json
+[2025-11-07 11:20:09] SUCCESS: Данные для Novosibirsk сохранены в /home/runner/work/Weather_tourism_pipeline/Weather_tourism_pipeline/scripts/../data/raw/openweather_api/2025/11/07/weather_Novosibirsk_20251107_1120.json
