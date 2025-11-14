@@ -5513,3 +5513,10 @@
 Витрина 1: Рейтинг городов (city_tourism_rating.csv) - сортировка по avg_comfort_index
 Витрина 2: Сводка по округам (federal_districts_summary.csv) - средняя temp по всем городам, комфортные города (comfort > 15 и не домашний отдых), рекомендация
 Витрина 3: Рекомендации (travel_recommendations.csv) - топ-3, дома, дополнительные заметки
+
+--- Новый запуск: 2025-11-14 01:53 ---
+Обработано файлов: 38 (weather_enriched_20251014.csv, weather_enriched_20251024.csv, weather_enriched_20251027.csv, weather_enriched_20251021.csv, weather_enriched_20251020.csv, weather_enriched_20251011.csv, weather_enriched_20251023.csv, weather_enriched_20251106.csv, weather_enriched_20251016.csv, weather_enriched_20251009.csv, weather_enriched_20251104.csv, weather_enriched_20251103.csv, weather_enriched_20251012.csv, weather_enriched_20251112.csv, weather_enriched_20251013.csv, weather_enriched_20251110.csv, weather_enriched_20251105.csv, weather_enriched_20251113.csv, weather_enriched_20251109.csv, weather_enriched_20251025.csv, weather_enriched_20251017.csv, weather_enriched_20251108.csv, weather_enriched_20251026.csv, weather_enriched_20251030.csv, weather_enriched_20251029.csv, weather_enriched_20251107.csv, weather_enriched_20251111.csv, weather_enriched_20251019.csv, weather_enriched_20251010.csv, weather_enriched_20251008.csv, weather_enriched_20251015.csv, weather_enriched_20251102.csv, weather_enriched_20251031.csv, weather_enriched_20251101.csv, weather_enriched_20251022.csv, weather_enriched_20251028.csv, weather_enriched_20251018.csv, weather_enriched_20251114.csv)
+Всего строк данных: 3900
+Витрина 1: Рейтинг городов (city_tourism_rating.csv) - сортировка по avg_comfort_index
+Витрина 2: Сводка по округам (federal_districts_summary.csv) - средняя temp по всем городам, комфортные города (comfort > 15 и не домашний отдых), рекомендация
+Витрина 3: Рекомендации (travel_recommendations.csv) - топ-3, дома, дополнительные заметки
