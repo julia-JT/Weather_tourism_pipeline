@@ -1,0 +1,51 @@
+{
+    "coord": {
+        "lon": 49.1221,
+        "lat": 55.7887
+    },
+    "weather": [
+        {
+            "id": 600,
+            "main": "Snow",
+            "description": "небольшой снег",
+            "icon": "13n"
+        }
+    ],
+    "base": "stations",
+    "main": {
+        "temp": 0.34,
+        "feels_like": -5.4,
+        "temp_min": 0.34,
+        "temp_max": 0.34,
+        "pressure": 1019,
+        "humidity": 95,
+        "sea_level": 1019,
+        "grnd_level": 1004
+    },
+    "wind": {
+        "speed": 6.82,
+        "deg": 175,
+        "gust": 15.01
+    },
+    "snow": {
+        "1h": 0.43
+    },
+    "clouds": {
+        "all": 100
+    },
+    "dt": 1763403786,
+    "sys": {
+        "type": 1,
+        "id": 9038,
+        "country": "RU",
+        "sunrise": 1763353383,
+        "sunset": 1763382849
+    },
+    "timezone": 10800,
+    "id": 551487,
+    "name": "Казань",
+    "cod": 200,
+    "city": "Kazan",
+    "timestamp": "2025-11-17T18:34:19.752800",
+    "source": "openweathermap.org"
+}
