@@ -1,0 +1,49 @@
+{
+    "coord": {
+        "lon": 37.6156,
+        "lat": 55.7522
+    },
+    "weather": [
+        {
+            "id": 800,
+            "main": "Clear",
+            "description": "ясно",
+            "icon": "01d"
+        }
+    ],
+    "base": "stations",
+    "main": {
+        "temp": 2.85,
+        "feels_like": 1.47,
+        "temp_min": 0.24,
+        "temp_max": 2.97,
+        "pressure": 1024,
+        "humidity": 80,
+        "sea_level": 1024,
+        "grnd_level": 1004
+    },
+    "visibility": 10000,
+    "wind": {
+        "speed": 1.52,
+        "deg": 333,
+        "gust": 2.16
+    },
+    "clouds": {
+        "all": 7
+    },
+    "dt": 1763889747,
+    "sys": {
+        "type": 2,
+        "id": 2094500,
+        "country": "RU",
+        "sunrise": 1763875246,
+        "sunset": 1763903488
+    },
+    "timezone": 10800,
+    "id": 524901,
+    "name": "Москва",
+    "cod": 200,
+    "city": "Moscow",
+    "timestamp": "2025-11-23T09:22:59.737507",
+    "source": "openweathermap.org"
+}
