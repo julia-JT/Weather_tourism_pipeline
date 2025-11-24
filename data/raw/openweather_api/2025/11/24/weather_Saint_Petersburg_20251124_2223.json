@@ -1,0 +1,51 @@
+{
+    "coord": {
+        "lon": 30.2642,
+        "lat": 59.8944
+    },
+    "weather": [
+        {
+            "id": 600,
+            "main": "Snow",
+            "description": "небольшой снег",
+            "icon": "13n"
+        }
+    ],
+    "base": "stations",
+    "main": {
+        "temp": 0.59,
+        "feels_like": -2.79,
+        "temp_min": 0.59,
+        "temp_max": 1.08,
+        "pressure": 1000,
+        "humidity": 94,
+        "sea_level": 1000,
+        "grnd_level": 1000
+    },
+    "visibility": 10000,
+    "wind": {
+        "speed": 3,
+        "deg": 250
+    },
+    "snow": {
+        "1h": 0.18
+    },
+    "clouds": {
+        "all": 75
+    },
+    "dt": 1764022791,
+    "sys": {
+        "type": 2,
+        "id": 2045711,
+        "country": "RU",
+        "sunrise": 1764051615,
+        "sunset": 1764076319
+    },
+    "timezone": 10800,
+    "id": 498817,
+    "name": "Санкт-Петербург",
+    "cod": 200,
+    "city": "Saint Petersburg",
+    "timestamp": "2025-11-24T22:23:16.369802",
+    "source": "openweathermap.org"
+}
