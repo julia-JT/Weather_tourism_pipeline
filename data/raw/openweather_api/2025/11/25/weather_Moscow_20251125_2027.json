@@ -1,0 +1,52 @@
+{
+    "coord": {
+        "lon": 37.6156,
+        "lat": 55.7522
+    },
+    "weather": [
+        {
+            "id": 600,
+            "main": "Snow",
+            "description": "небольшой снег",
+            "icon": "13n"
+        }
+    ],
+    "base": "stations",
+    "main": {
+        "temp": 1.36,
+        "feels_like": -1.64,
+        "temp_min": 0.77,
+        "temp_max": 1.48,
+        "pressure": 1017,
+        "humidity": 69,
+        "sea_level": 1017,
+        "grnd_level": 997
+    },
+    "visibility": 146,
+    "wind": {
+        "speed": 2.74,
+        "deg": 202,
+        "gust": 8.29
+    },
+    "snow": {
+        "1h": 0.18
+    },
+    "clouds": {
+        "all": 100
+    },
+    "dt": 1764102354,
+    "sys": {
+        "type": 2,
+        "id": 2094500,
+        "country": "RU",
+        "sunrise": 1764048271,
+        "sunset": 1764076134
+    },
+    "timezone": 10800,
+    "id": 524901,
+    "name": "Москва",
+    "cod": 200,
+    "city": "Moscow",
+    "timestamp": "2025-11-25T20:27:45.868852",
+    "source": "openweathermap.org"
+}
